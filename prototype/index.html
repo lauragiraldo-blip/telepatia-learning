@@ -500,6 +500,7 @@
             </p>
           </div>
         </div>
+        <div id="goldcustom" style="display:none;"></div>
         <div id="goldreal">
         <div class="cmpsum">
           <svg class="ic" width="14" height="14" style="color:var(--green);"><use href="#i-scale"/></svg>
@@ -827,14 +828,17 @@ function enterScene(i){
   if (i === 5){
     const custom = caseMeta.custom;
     document.getElementById('goldreal').style.display = custom ? 'none' : '';
-    document.getElementById('goldpending').style.display = custom ? '' : 'none';
     const gb = document.getElementById('goldNext');
     gb.textContent = custom ? 'Ver panel docente →' : 'Corregir la nota →';
     gb.onclick = ()=>go(custom ? 7 : 6);
     if (!custom){
-      const cells = scene.querySelectorAll('.cmpcell');
+      document.getElementById('goldpending').style.display = 'none';
+      document.getElementById('goldcustom').style.display = 'none';
+      const cells = scene.querySelectorAll('#goldreal .cmpcell');
       cells.forEach(c=>c.classList.remove('show'));
       cells.forEach((c,k)=>setTimeout(()=>c.classList.add('show'), 500 + k*350));
+    } else {
+      updateGoldCustom();
     }
   }
   if (i === 6){
@@ -1011,7 +1015,7 @@ function createCase(){
   snapshotCurrent();
   caseMeta = { custom:true, title, spec, amb, age, weight, motivo };
   importedText = null; importedName = null; renderedFor = null;
-  liveTranscript = ''; generatedSOAP = null;
+  liveTranscript = ''; generatedSOAP = null; goldComparison = null;
   const id = 'case' + (nextCaseId++);
   currentCaseId = id;
   document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
@@ -1040,11 +1044,12 @@ const BRIEF_DEFAULT = {
 
 /* per-case state: each case keeps its own note, transcript, and generated content */
 let caseStates = {}, currentCaseId = 'default', nextCaseId = 1;
+let goldComparison = null, goldGenerating = false;
 
 function snapshotCurrent(){
   caseStates[currentCaseId] = {
     caseMeta, liveTranscript, generatedSOAP, importedText, importedName,
-    noteHTML: noteBody.innerHTML, renderedFor,
+    noteHTML: noteBody.innerHTML, renderedFor, goldComparison,
   };
 }
 
@@ -1084,10 +1089,11 @@ function activateCase(id, card){
     importedName = s.importedName;
     noteBody.innerHTML = s.noteHTML;
     renderedFor = s.renderedFor;
+    goldComparison = s.goldComparison || null;
   } else {
     caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
     importedText = null; importedName = null; renderedFor = null;
-    liveTranscript = ''; generatedSOAP = null;
+    liveTranscript = ''; generatedSOAP = null; goldComparison = null;
   }
   document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
   card.classList.add('active');
@@ -1104,7 +1110,7 @@ function resetDemo(){
   caseStates = {}; currentCaseId = 'default';
   caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
   importedText = null; importedName = null; renderedFor = null;
-  liveTranscript = ''; generatedSOAP = null;
+  liveTranscript = ''; generatedSOAP = null; goldComparison = null;
   applyCaseChrome();
   document.getElementById('livetr').innerHTML = '';
   document.getElementById('pvwrap').style.display = 'none';
@@ -1125,6 +1131,131 @@ function deleteCase(e, btn){
     activateCase('default', document.querySelector('.side .case'));
     delete caseStates['__deleted__'];
   }
+}
+
+/* ── AI gold-standard comparison for created cases ── */
+function markify(t, cls){
+  return esc(t).replace(/\[\[(.+?)\]\]/g, '<mark class="' + cls + '">$1</mark>');
+}
+
+function updateGoldCustom(){
+  const pend = document.getElementById('goldpending');
+  const gc = document.getElementById('goldcustom');
+  const key = localStorage.getItem('tp_api_key');
+  const noteText = noteBody.innerText.trim();
+  if (goldComparison){
+    pend.style.display = 'none'; gc.style.display = '';
+    renderGoldComparison(gc);
+  } else if (goldGenerating){
+    pend.style.display = 'none'; gc.style.display = '';
+  } else if (key && noteText.length > 60){
+    pend.style.display = 'none'; gc.style.display = '';
+    gc.innerHTML = '<div class="panelcard" style="max-width:640px;">' +
+      '<div style="font-size:13px;font-weight:700;margin-bottom:8px;">Generando el estándar de oro…</div>' +
+      '<p style="font-size:12.5px;line-height:1.65;color:#78806C;">La IA está construyendo la nota de ' +
+      'referencia de este caso y comparándola con la nota del estudiante. Unos segundos.</p></div>';
+    generateGoldComparison(key, noteText);
+  } else {
+    gc.style.display = 'none'; pend.style.display = '';
+  }
+}
+
+async function generateGoldComparison(key, noteText){
+  goldGenerating = true;
+  const forCase = currentCaseId;
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-8',
+        max_tokens: 2500,
+        system: 'Eres un docente clínico que define estándares de oro para casos simulados de estudiantes ' +
+          'de medicina. Recibirás los datos de un caso y la nota SOAP del estudiante. Primero construye la ' +
+          'nota de referencia (estándar de oro) para este caso según buenas prácticas clínicas y guías; luego ' +
+          'compárala con la nota del estudiante. Devuelve un resumen de una línea y de 3 a 5 filas de ' +
+          'comparación de las secciones más relevantes, priorizando el plan y la educación al paciente. ' +
+          'En cada fila: label corto (por ejemplo "P · analgesia"); student: el texto del estudiante con sus ' +
+          'desviaciones envueltas en [[ ]]; gold: el texto del estándar con los elementos clave envueltos en ' +
+          '[[ ]]. Si el estudiante omitió por completo una sección, student debe ser exactamente ' +
+          '"[[Sección ausente en la nota del estudiante]]". Español clínico, texto plano, sin markdown.',
+        output_config: { format: { type: 'json_schema', schema: {
+          type: 'object',
+          properties: {
+            summary: { type: 'string', description: 'Resumen de una línea de la comparación' },
+            rows: { type: 'array', items: {
+              type: 'object',
+              properties: {
+                label: { type: 'string' },
+                student: { type: 'string' },
+                gold: { type: 'string' },
+              },
+              required: ['label', 'student', 'gold'],
+              additionalProperties: false,
+            } },
+          },
+          required: ['summary', 'rows'],
+          additionalProperties: false,
+        } } },
+        messages: [{ role: 'user', content:
+          'Caso: ' + caseMeta.title +
+          (caseMeta.age ? ' · Edad: ' + caseMeta.age : '') +
+          (caseMeta.weight ? ' · Peso: ' + caseMeta.weight + ' kg' : '') +
+          (caseMeta.motivo ? ' · Motivo: ' + caseMeta.motivo : '') +
+          '\n\nNota SOAP del estudiante:\n' + noteText }],
+      }),
+    });
+    const data = await res.json();
+    if (data.type === 'error') throw new Error(data.error.message);
+    if (data.stop_reason === 'refusal') throw new Error('la solicitud fue rechazada');
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if (!textBlock) throw new Error('respuesta sin contenido');
+    const cmp = JSON.parse(textBlock.text);
+    goldGenerating = false;
+    if (currentCaseId === forCase){
+      goldComparison = cmp;
+      if (cur === 5 && caseMeta.custom) updateGoldCustom();
+    } else if (caseStates[forCase]){
+      caseStates[forCase].goldComparison = cmp;
+    }
+  } catch(err){
+    goldGenerating = false;
+    if (currentCaseId === forCase && cur === 5 && caseMeta.custom){
+      const gc = document.getElementById('goldcustom');
+      gc.innerHTML = '<div class="panelcard" style="max-width:640px;">' +
+        '<div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--red);">No se pudo generar la comparación</div>' +
+        '<p style="font-size:12.5px;line-height:1.65;color:#474D3E;">' + esc(err.message) +
+        '. Vuelve a entrar a esta pantalla para reintentar.</p></div>';
+    }
+  }
+}
+
+function renderGoldComparison(gc){
+  const rows = (goldComparison.rows || []).map(r =>
+    '<div class="cmplabel">' + esc(r.label) + '</div>' +
+    (r.student.indexOf('Sección ausente') >= 0
+      ? '<div class="cmpcell absent">' + esc(r.student.replace(/\[\[|\]\]/g, '')) + '</div>'
+      : '<div class="cmpcell">' + markify(r.student, 'bad') + '</div>') +
+    '<div class="cmpcell">' + markify(r.gold, 'good') + '</div>'
+  ).join('');
+  gc.innerHTML =
+    '<div class="cmpsum"><svg class="ic" width="14" height="14" style="color:var(--green);"><use href="#i-scale"/></svg> ' +
+    esc(goldComparison.summary) + ' <span style="color:var(--soft);">Estándar de oro generado con IA; en producción lo aprueba el docente.</span></div>' +
+    '<div class="legend">' +
+    '<span class="lg"><mark class="bad">texto</mark> Se aparta del estándar</span>' +
+    '<span class="lg"><mark class="good">texto</mark> Estándar de oro</span>' +
+    '<span class="lg">Texto sin marca: coincide</span></div>' +
+    '<div class="cmpgrid">' +
+    '<div class="cmphead"><span class="avatar">C</span> Nota del estudiante</div>' +
+    '<div class="cmphead" style="color:var(--green-dark);"><svg class="ic" width="14" height="14"><use href="#i-check"/></svg> Estándar de oro · generado con IA</div>' +
+    rows + '</div>';
+  const cells = gc.querySelectorAll('.cmpcell');
+  cells.forEach((c, k) => setTimeout(() => c.classList.add('show'), 300 + k * 300));
 }
 
 /* ── live dictation (Web Speech API) + AI note generation ── */
@@ -1191,6 +1322,7 @@ async function finishConsult(){
   if (recogActive) toggleDictation();
   const key = localStorage.getItem('tp_api_key');
   if (liveTranscript.trim() && key) await generateSoapNote(key);
+  goldComparison = null;
   renderedFor = null; // force the note to re-render with the new transcript / generated content
   go(3);
 }
