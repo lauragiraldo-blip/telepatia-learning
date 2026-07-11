@@ -63,7 +63,7 @@
   /* live edit */
   .editchip{font-size:10.5px;font-weight:600;background:var(--chip-green-bg);color:var(--chip-green-tx);
             padding:4px 11px;border-radius:999px;display:inline-flex;gap:5px;align-items:center;}
-  .sect .txt[contenteditable]{border-radius:8px;padding:6px 8px;margin:-6px -8px;cursor:text;
+  .sect .txt[contenteditable]{border-radius:8px;padding:6px 8px;margin:-6px -8px;cursor:text;min-height:24px;
                               transition:background .2s ease, box-shadow .2s ease;}
   .sect .txt[contenteditable]:hover{background:#FCFCF6;box-shadow:0 0 0 1px var(--border);}
   .sect .txt[contenteditable]:focus{outline:none;background:#fff;box-shadow:0 0 0 1.5px var(--green);}
@@ -205,6 +205,21 @@
   .entry .eh{font-size:13.5px;font-weight:700;display:flex;gap:8px;align-items:center;margin-bottom:6px;color:var(--green-dark);}
   .entry .ed{font-size:12px;color:var(--muted);line-height:1.55;}
 
+  /* new case modal */
+  .modal{position:absolute;inset:0;background:rgba(28,33,28,.35);display:none;align-items:center;
+         justify-content:center;z-index:40;}
+  .modal.on{display:flex;}
+  .mcard{width:520px;background:var(--card);border:1px solid var(--border);border-radius:16px;
+         padding:26px 30px;box-shadow:0 18px 60px rgba(20,25,18,.25);}
+  .mcard h2{font-size:17px;font-weight:700;margin-bottom:16px;}
+  .fld{margin-bottom:12px;}
+  .fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+             color:#576A55;margin-bottom:5px;}
+  .fld input,.fld select,.fld textarea{width:100%;font-family:inherit;font-size:13px;color:var(--ink);
+       background:#FAFAF3;border:1px solid var(--border);border-radius:9px;padding:9px 11px;outline:none;}
+  .fld input:focus,.fld select:focus,.fld textarea:focus{border-color:var(--green);background:#fff;}
+  .frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
   /* demo controls */
   .ctrl{position:fixed;bottom:22px;right:26px;display:flex;gap:8px;align-items:center;z-index:50;
         background:var(--pill-dark);border-radius:999px;padding:8px 12px;box-shadow:0 6px 24px rgba(0,0,0,.3);}
@@ -253,7 +268,7 @@
       <div class="sub">Semiología</div>
       <span class="chip done">● Aprobado · 84%</span>
     </div>
-    <button class="newbtn">Nuevo caso +</button>
+    <button class="newbtn" style="cursor:pointer;" onclick="openNewCase()">Nuevo caso +</button>
   </div>
 
   <!-- ══ Main ══ -->
@@ -264,11 +279,11 @@
       <div class="briefwrap">
         <div class="brief">
           <div class="eyebrow">Caso simulado · Modo estudiante</div>
-          <h1>Lactante de 18 meses con fiebre</h1>
-          <p>Acude la madre con su hija de 18 meses por fiebre de 24 horas de evolución.
+          <h1 id="briefTitle">Lactante de 18 meses con fiebre</h1>
+          <p id="briefDesc">Acude la madre con su hija de 18 meses por fiebre de 24 horas de evolución.
              Realiza la entrevista, el examen físico dirigido y elabora la historia clínica
              completa con tu plan de manejo.</p>
-          <div class="meta">
+          <div class="meta" id="briefMeta">
             <span class="mchip">18 meses · 11 kg</span>
             <span class="mchip">Ambulatorio</span>
             <span class="mchip">Guías: institucional + AIEPI</span>
@@ -293,10 +308,14 @@
       <div style="display:flex;flex:1;min-height:0;">
         <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
           <div class="top">
-            <h1>Caso 03 · Lactante febril</h1>
+            <h1 id="s1title">Caso 03 · Lactante febril</h1>
             <span class="timer"><span class="recdot"></span><span id="clock">00:00</span></span>
           </div>
           <div class="body transcript" id="tr">
+            <div id="trhint" style="display:none;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:600px;">
+              Grabación en curso. La transcripción de demostración pertenece al caso 03; para un caso nuevo,
+              realiza la entrevista y continúa a redactar la nota SOAP.
+            </div>
             <div class="line est"><b>Estudiante:</b> Buenos días, soy la estudiante de medicina que va a atender a la bebé. Cuénteme, ¿qué le trae hoy a consulta?</div>
             <div class="line mad"><b>Madre:</b> Tiene fiebre desde ayer en la tarde, le llegó hasta 39 grados.</div>
             <div class="line est"><b>Estudiante:</b> ¿Ha notado tos, vómito, diarrea o rechazo a la alimentación?</div>
@@ -358,7 +377,7 @@
     <!-- ── Scene 3: student note, live-editable ── -->
     <div class="scene" id="s3">
       <div class="top">
-        <span class="avatar">C3</span><h1>Historia clínica · borrador del estudiante</h1>
+        <span class="avatar">C3</span><h1 id="s3title">Historia clínica · borrador del estudiante</h1>
         <span class="editchip"><svg class="ic" width="11" height="11"><use href="#i-pen"/></svg> Edición en vivo: haz clic en cualquier sección</span>
       </div>
       <div class="body">
@@ -404,15 +423,15 @@
             <div class="lab" id="lab1" style="color:var(--red);">DEFICIENTE</div>
           </div>
           <div class="bars">
-            <div class="brow"><div class="bt"><span>Identificación y anamnesis</span><span>86%</span></div>
-              <div class="track"><div class="fill" data-w="86%" style="background:var(--green);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Examen físico</span><span>92%</span></div>
-              <div class="track"><div class="fill" data-w="92%" style="background:var(--green);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Diagnóstico</span><span>100%</span></div>
-              <div class="track"><div class="fill" data-w="100%" style="background:var(--green);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Plan y tratamiento</span><span id="planPct">38%</span></div>
+            <div class="brow"><div class="bt"><span>S · Subjetivo (anamnesis)</span><span id="sPct">86%</span></div>
+              <div class="track"><div class="fill" id="sFill" data-w="86%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>O · Objetivo (examen y signos vitales)</span><span id="oPct">92%</span></div>
+              <div class="track"><div class="fill" id="oFill" data-w="92%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>A · Análisis y diagnóstico</span><span id="aPct">100%</span></div>
+              <div class="track"><div class="fill" id="aFill" data-w="100%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>P · Plan y tratamiento</span><span id="planPct">38%</span></div>
               <div class="track"><div class="fill" id="planFill" data-w="38%" style="background:var(--orange-bar);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Educación al cuidador</span><span id="eduPct">0%</span></div>
+            <div class="brow"><div class="bt"><span>P · Educación al cuidador</span><span id="eduPct">0%</span></div>
               <div class="track"><div class="fill" id="eduFill" data-w="3%" style="background:var(--red);"></div></div></div>
           </div>
         </div>
@@ -454,6 +473,17 @@
     <div class="scene" id="s5">
       <div class="top"><span class="avatar">C3</span><h1>Comparación con el estándar de oro</h1></div>
       <div class="body">
+        <div id="goldpending" style="display:none;">
+          <div class="panelcard" style="max-width:640px;">
+            <div style="font-size:13px;font-weight:700;margin-bottom:8px;">Estándar de oro pendiente</div>
+            <p style="font-size:12.5px;line-height:1.65;color:#474D3E;">
+              Este caso aún no tiene un estándar de oro aprobado. En producción, el docente
+              aprueba la nota de referencia y el set de órdenes al crear el caso; a partir de
+              ahí la comparación se genera automáticamente, como en el caso 03.
+            </p>
+          </div>
+        </div>
+        <div id="goldreal">
         <div class="cmpsum">
           <svg class="ic" width="14" height="14" style="color:var(--green);"><use href="#i-scale"/></svg>
           Coincide en 4 de 6 secciones · 2 desviaciones en el plan · 1 sección ausente. El estándar de oro fue aprobado por el docente del curso.
@@ -483,9 +513,10 @@
           <div class="cmpcell absent">Sección ausente en la nota del estudiante</div>
           <div class="cmpcell"><mark class="good">Signos de alarma explicados a la madre</mark>: fiebre mayor a 48 horas, mal aspecto o somnolencia, petequias, rechazo de la vía oral, convulsión.</div>
         </div>
+        </div>
       </div>
       <div class="footerbar">
-        <button class="btn primary" onclick="go(6)">Corregir la nota →</button>
+        <button class="btn primary" id="goldNext" onclick="go(6)">Corregir la nota →</button>
       </div>
     </div>
 
@@ -586,6 +617,32 @@
     </div>
 
   </div>
+
+  <!-- new case modal -->
+  <div class="modal" id="ncmodal">
+    <div class="mcard">
+      <h2>Nuevo caso</h2>
+      <div class="fld"><label>Título del caso</label><input id="ncTitle" placeholder="Caso 04 · Dolor abdominal"></div>
+      <div class="frow">
+        <div class="fld"><label>Especialidad</label>
+          <select id="ncSpec">
+            <option>Pediatría</option><option>Medicina interna</option><option>Ginecología</option>
+            <option>Urgencias</option><option>Semiología</option>
+          </select></div>
+        <div class="fld"><label>Ámbito</label>
+          <select id="ncAmb"><option>Ambulatorio</option><option>Urgencias</option><option>Hospitalización</option></select></div>
+      </div>
+      <div class="frow">
+        <div class="fld"><label>Edad</label><input id="ncAge" placeholder="7 años"></div>
+        <div class="fld"><label>Peso (kg)</label><input id="ncWeight" placeholder="24"></div>
+      </div>
+      <div class="fld"><label>Motivo de consulta</label><input id="ncMotivo" placeholder="Dolor abdominal de 12 horas"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
+        <button class="btn line" onclick="closeNewCase()">Cancelar</button>
+        <button class="btn primary" onclick="createCase()">Crear caso</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- demo controls -->
@@ -655,8 +712,9 @@ function enterScene(i){
       clock.textContent = String(Math.floor(sec/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0');
     }, 1000);
     const lines = scene.querySelectorAll('.line');
-    lines.forEach(l=>l.classList.remove('show'));
-    lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
+    document.getElementById('trhint').style.display = caseMeta.custom ? '' : 'none';
+    lines.forEach(l=>{ l.classList.remove('show'); l.style.display = caseMeta.custom ? 'none' : ''; });
+    if (!caseMeta.custom) lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
   }
   if (i === 2 && !importedName){
     const dz = document.getElementById('dz'), fc = document.getElementById('filechip');
@@ -673,7 +731,7 @@ function enterScene(i){
       st.innerHTML = CHECK_SVG + 'Nota estructurada lista para retroalimentación'; }, 6200);
   }
   if (i === 3){
-    const want = importedText ? importedName : 'default';
+    const want = importedText ? importedName : (caseMeta.custom ? 'custom:' + caseMeta.title : 'default');
     if (want !== renderedFor){ renderNote(); renderedFor = want; }
   }
   if (i === 4){
@@ -700,6 +758,12 @@ function enterScene(i){
     const ef = document.getElementById('eduFill');
     ef.dataset.w = Math.max(a.edu, 3) + '%';
     ef.style.background = a.edu >= 90 ? 'var(--green)' : 'var(--red)';
+    [['s','sPct','sFill'],['o','oPct','oFill'],['a','aPct','aFill']].forEach(([k,pid,fid])=>{
+      document.getElementById(pid).textContent = a[k] + '%';
+      const f = document.getElementById(fid);
+      f.dataset.w = Math.max(a[k], 3) + '%';
+      f.style.background = a[k] >= 85 ? 'var(--green)' : (a[k] >= 60 ? 'var(--orange-bar)' : 'var(--red)');
+    });
     const col = a.total >= 90 ? 'var(--green)' : (a.total >= 70 ? 'var(--amber)' : 'var(--red)');
     const lab = document.getElementById('lab1');
     lab.textContent = a.total >= 90 ? 'SOBRESALIENTE' : (a.total >= 70 ? 'ACEPTABLE' : 'DEFICIENTE');
@@ -713,9 +777,17 @@ function enterScene(i){
     });
   }
   if (i === 5){
-    const cells = scene.querySelectorAll('.cmpcell');
-    cells.forEach(c=>c.classList.remove('show'));
-    cells.forEach((c,k)=>setTimeout(()=>c.classList.add('show'), 500 + k*350));
+    const custom = caseMeta.custom;
+    document.getElementById('goldreal').style.display = custom ? 'none' : '';
+    document.getElementById('goldpending').style.display = custom ? '' : 'none';
+    const gb = document.getElementById('goldNext');
+    gb.textContent = custom ? 'Ver panel docente →' : 'Corregir la nota →';
+    gb.onclick = ()=>go(custom ? 7 : 6);
+    if (!custom){
+      const cells = scene.querySelectorAll('.cmpcell');
+      cells.forEach(c=>c.classList.remove('show'));
+      cells.forEach((c,k)=>setTimeout(()=>c.classList.add('show'), 500 + k*350));
+    }
   }
   if (i === 6){
     animateBars(scene);
@@ -739,6 +811,18 @@ function renderNote(){
       '<div class="txt" contenteditable="true" spellcheck="false">' + safeText + '</div></div>' +
       '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">Texto extraído del documento. ' +
       'Edítalo libremente: la retroalimentación se ejecuta sobre este contenido.</p>';
+  } else if (caseMeta.custom){
+    const secs = [
+      ['S · Subjetivo', caseMeta.motivo ? '"' + caseMeta.motivo + '". ' : ''],
+      ['O · Objetivo', caseMeta.weight ? 'Peso: ' + caseMeta.weight + ' kg. ' : ''],
+      ['A · Análisis', ''],
+      ['P · Plan', ''],
+    ];
+    noteBody.innerHTML = secs.map(([h, c])=>
+      '<div class="sect"><h2>' + h + '</h2>' +
+      '<div class="txt" contenteditable="true" spellcheck="false">' + esc(c) + '</div></div>').join('') +
+      '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">Nota SOAP del caso nuevo. ' +
+      'Redacta cada componente: la retroalimentación evalúa este contenido.</p>';
   } else {
     noteBody.innerHTML = NOTE_DEFAULT;
   }
@@ -820,7 +904,7 @@ fileInput.addEventListener('change', ()=>{ if (fileInput.files[0]) handleFile(fi
 function auditNote(){
   const t = noteBody.innerText.toLowerCase();
   const wm = t.match(/peso[:\s]*([\d.,]+)\s*kg/);
-  const kg = wm ? parseFloat(wm[1].replace(',','.')) : 11;
+  const kg = wm ? parseFloat(wm[1].replace(',','.')) : (caseMeta.weight || 11);
   const f1 = !/signos? de alarma|signos? de peligro/.test(t);
   let f2 = false, dose = null;
   // concentration (e.g. 150 mg/5 ml), then strip it so it can't be mistaken for the dose
@@ -847,8 +931,47 @@ function auditNote(){
   const f3 = /albendazol|desparasitaci/.test(t);
   const plan = 100 - (f2 ? 31 : 0) - (f3 ? 31 : 0);
   const edu = f1 ? 0 : 100;
-  const total = Math.round((86*0.25 + 92*0.15 + 100*0.10 + plan*0.30 + edu*0.20)*10)/10;
-  return { f1, f2, f3, dose, plan, edu, total };
+  // SOAP component heuristics, computed from whatever text the note holds
+  const s = /(motivo|refiere|niega|cuadro|evoluci[oó]n|subjetivo)/.test(t) ? (t.length > 250 ? 86 : 72) : 35;
+  const o = /(\bt\s*:?\s*\d{2}|°\s*c|fc\s*:?\s*\d|fr\s*:?\s*\d|temperatura|frecuencia card|signos vitales)/.test(t) ? 92 : 45;
+  const a = /(diagn[oó]stic|impresi[oó]n|an[aá]lisis|[a-z]\d{2}\.?\d?\))/.test(t) ? 100 : 40;
+  const total = Math.round((s*0.25 + o*0.15 + a*0.10 + plan*0.30 + edu*0.20)*10)/10;
+  return { f1, f2, f3, dose, s, o, a, plan, edu, total };
+}
+
+/* ── new case creation ── */
+let caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
+function esc(s){ return String(s).replace(/</g,'&lt;'); }
+function openNewCase(){ document.getElementById('ncmodal').classList.add('on'); }
+function closeNewCase(){ document.getElementById('ncmodal').classList.remove('on'); }
+function createCase(){
+  const title = document.getElementById('ncTitle').value.trim() || 'Caso nuevo';
+  const spec = document.getElementById('ncSpec').value;
+  const amb = document.getElementById('ncAmb').value;
+  const age = document.getElementById('ncAge').value.trim();
+  const weight = parseFloat(String(document.getElementById('ncWeight').value).replace(',','.')) || null;
+  const motivo = document.getElementById('ncMotivo').value.trim();
+  caseMeta = { custom:true, title, spec, amb, age, weight, motivo };
+  importedText = null; importedName = null; renderedFor = null;
+  document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
+  const card = document.createElement('div');
+  card.className = 'case active';
+  card.innerHTML = '<div class="t">' + esc(title) + '</div><div class="sub">' + esc(spec) +
+                   '</div><span class="chip pend">● En curso</span>';
+  const first = document.querySelector('.side .case');
+  first.parentNode.insertBefore(card, first);
+  document.getElementById('briefTitle').textContent = title;
+  document.getElementById('briefDesc').textContent =
+    (motivo ? 'Motivo de consulta: ' + motivo + '. ' : '') +
+    'Realiza la entrevista, el examen físico dirigido y elabora la historia clínica en formato SOAP con tu plan de manejo.';
+  document.getElementById('briefMeta').innerHTML =
+    (age || weight ? '<span class="mchip">' + esc([age, weight ? weight + ' kg' : ''].filter(Boolean).join(' · ')) + '</span>' : '') +
+    '<span class="mchip">' + esc(amb) + '</span><span class="mchip">' + esc(spec) +
+    '</span><span class="mchip">Guías: institucional</span>';
+  document.getElementById('s1title').textContent = title;
+  document.getElementById('s3title').textContent = title + ' · nota SOAP del estudiante';
+  closeNewCase();
+  go(0);
 }
 
 document.addEventListener('keydown', e=>{
