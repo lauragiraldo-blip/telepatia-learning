@@ -60,6 +60,14 @@
   .sect .txt{font-size:13px;line-height:1.65;color:#3C4234;}
   .panelcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
 
+  /* live edit */
+  .editchip{font-size:10.5px;font-weight:600;background:var(--chip-green-bg);color:var(--chip-green-tx);
+            padding:4px 11px;border-radius:999px;display:inline-flex;gap:5px;align-items:center;}
+  .sect .txt[contenteditable]{border-radius:8px;padding:6px 8px;margin:-6px -8px;cursor:text;
+                              transition:background .2s ease, box-shadow .2s ease;}
+  .sect .txt[contenteditable]:hover{background:#FCFCF6;box-shadow:0 0 0 1px var(--border);}
+  .sect .txt[contenteditable]:focus{outline:none;background:#fff;box-shadow:0 0 0 1.5px var(--green);}
+
   .footerbar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;
              justify-content:flex-end;gap:12px;padding:14px 24px;background:linear-gradient(0deg,var(--canvas) 65%,transparent);}
   .btn{border-radius:999px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:none;
@@ -127,6 +135,23 @@
   .planitem svg{margin-top:3px;color:var(--chip-green-tx);}
   .strike{text-decoration:line-through;color:var(--soft);}
   .fixnew{color:var(--green-dark);font-weight:600;}
+
+  /* gold standard comparison */
+  .legend{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap;}
+  .legend .lg{font-size:11px;font-weight:600;color:var(--muted);display:inline-flex;gap:6px;align-items:center;}
+  mark.bad{background:var(--red-bg);color:var(--red);font-weight:600;padding:1px 5px;border-radius:4px;}
+  mark.good{background:var(--chip-green-bg);color:var(--green-dark);font-weight:600;padding:1px 5px;border-radius:4px;}
+  .cmpgrid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
+  .cmphead{font-size:12.5px;font-weight:700;padding:0 4px 8px;display:flex;gap:8px;align-items:center;}
+  .cmplabel{grid-column:1 / -1;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+            color:var(--soft);padding:12px 4px 6px;}
+  .cmpcell{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:11px 14px;
+           font-size:12.5px;line-height:1.65;color:#3C4234;opacity:0;transform:translateY(8px);transition:all .5s ease;}
+  .cmpcell.show{opacity:1;transform:none;}
+  .cmpcell.absent{border:1.5px dashed #E3B8B3;background:#FDF6F5;color:var(--red);font-weight:600;
+                  display:flex;align-items:center;justify-content:center;text-align:center;font-size:12px;}
+  .cmpsum{font-size:12.5px;color:#474D3E;background:var(--card);border:1px solid var(--border);
+          border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;gap:8px;align-items:center;}
 
   /* upload scene */
   .upwrap{flex:1;display:flex;align-items:center;justify-content:center;}
@@ -204,6 +229,8 @@
   <symbol id="i-clip" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.4 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.65 5.66l-9.2 9.19a2 2 0 01-2.82-2.83l8.49-8.48"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></g></symbol>
   <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></g></symbol>
+  <symbol id="i-pen" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5z"/></g></symbol>
+  <symbol id="i-scale" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><path d="M5 7l-3 6a3.5 3.5 0 006 0z"/><path d="M19 7l-3 6a3.5 3.5 0 006 0z"/><line x1="4" y1="7" x2="20" y2="7"/></g></symbol>
 </svg>
 
 <div class="stage">
@@ -323,25 +350,28 @@
       </div>
     </div>
 
-    <!-- ── Scene 3: student note (with planted errors) ── -->
+    <!-- ── Scene 3: student note, live-editable ── -->
     <div class="scene" id="s3">
-      <div class="top"><span class="avatar">C3</span><h1>Historia clínica · borrador del estudiante</h1></div>
+      <div class="top">
+        <span class="avatar">C3</span><h1>Historia clínica · borrador del estudiante</h1>
+        <span class="editchip"><svg class="ic" width="11" height="11"><use href="#i-pen"/></svg> Edición en vivo: haz clic en cualquier sección</span>
+      </div>
       <div class="body">
         <div class="sect"><h2>Identificación</h2>
-          <div class="txt">Lactante femenina de 18 meses. Peso: 11 kg. Acompañada por la madre.</div></div>
+          <div class="txt" contenteditable="true" spellcheck="false">Lactante femenina de 18 meses. Peso: 11 kg. Acompañada por la madre.</div></div>
         <div class="sect"><h2>Motivo de consulta</h2>
-          <div class="txt">"Fiebre desde ayer"</div></div>
+          <div class="txt" contenteditable="true" spellcheck="false">"Fiebre desde ayer"</div></div>
         <div class="sect"><h2>Enfermedad actual</h2>
-          <div class="txt">Cuadro de 24 horas de evolución consistente en fiebre cuantificada hasta 39 °C,
+          <div class="txt" contenteditable="true" spellcheck="false">Cuadro de 24 horas de evolución consistente en fiebre cuantificada hasta 39 °C,
           asociada a irritabilidad leve. Niega tos, vómito, diarrea o rechazo de la vía oral.
           Diuresis conservada. Recibió una dosis de acetaminofén la noche previa con respuesta parcial.</div></div>
         <div class="sect"><h2>Examen físico</h2>
-          <div class="txt">T 38.8 °C · FC 132 · FR 28. Activa, hidratada, mucosas húmedas.
+          <div class="txt" contenteditable="true" spellcheck="false">T 38.8 °C · FC 132 · FR 28. Activa, hidratada, mucosas húmedas.
           Orofaringe y otoscopia normales. No signos meníngeos. Sin foco infeccioso aparente.</div></div>
         <div class="sect"><h2>Diagnóstico</h2>
-          <div class="txt">Fiebre sin foco en lactante (R50.9).</div></div>
+          <div class="txt" contenteditable="true" spellcheck="false">Fiebre sin foco en lactante (R50.9).</div></div>
         <div class="sect"><h2>Plan</h2>
-          <div class="txt">
+          <div class="txt" contenteditable="true" spellcheck="false">
             1. Acetaminofén jarabe 150 mg/5 ml: <b>10 ml VO cada 6 horas</b>.<br>
             2. <b>Albendazol 400 mg VO dosis única</b> (desparasitación de rutina).<br>
             3. Control ambulatorio en 48 horas.
@@ -411,12 +441,51 @@
         </div>
       </div>
       <div class="footerbar">
-        <button class="btn primary" onclick="go(5)">Corregir la nota →</button>
+        <button class="btn primary" onclick="go(5)"><svg class="ic" width="14" height="14"><use href="#i-scale"/></svg> Comparar con el estándar de oro</button>
       </div>
     </div>
 
-    <!-- ── Scene 5: corrected note + new score ── -->
+    <!-- ── Scene 5: gold standard comparison ── -->
     <div class="scene" id="s5">
+      <div class="top"><span class="avatar">C3</span><h1>Comparación con el estándar de oro</h1></div>
+      <div class="body">
+        <div class="cmpsum">
+          <svg class="ic" width="14" height="14" style="color:var(--green);"><use href="#i-scale"/></svg>
+          Coincide en 4 de 6 secciones · 2 desviaciones en el plan · 1 sección ausente. El estándar de oro fue aprobado por el docente del curso.
+        </div>
+        <div class="legend">
+          <span class="lg"><mark class="bad">texto</mark> Se aparta del estándar</span>
+          <span class="lg"><mark class="good">texto</mark> Estándar de oro</span>
+          <span class="lg">Texto sin marca: coincide</span>
+        </div>
+        <div class="cmpgrid">
+          <div class="cmphead"><span class="avatar">C3</span> Nota del estudiante</div>
+          <div class="cmphead" style="color:var(--green-dark);"><svg class="ic" width="14" height="14"><use href="#i-check"/></svg> Estándar de oro · aprobado por docentes</div>
+
+          <div class="cmplabel">Plan · analgesia</div>
+          <div class="cmpcell">Acetaminofén jarabe 150 mg/5 ml: <mark class="bad">10 ml VO cada 6 horas (27 mg/kg/dosis)</mark></div>
+          <div class="cmpcell">Acetaminofén jarabe 150 mg/5 ml: <mark class="good">5 ml VO cada 6 horas si fiebre (13.6 mg/kg/dosis)</mark></div>
+
+          <div class="cmplabel">Plan · desparasitación</div>
+          <div class="cmpcell"><mark class="bad">Albendazol 400 mg VO dosis única</mark> (desparasitación de rutina)</div>
+          <div class="cmpcell"><mark class="good">No incluido</mark>: sin indicación en un episodio febril agudo sin criterios documentados</div>
+
+          <div class="cmplabel">Plan · seguimiento</div>
+          <div class="cmpcell">Control ambulatorio en 48 horas.</div>
+          <div class="cmpcell">Control ambulatorio en 48 horas <mark class="good">con reconsulta inmediata si aparecen signos de alarma</mark></div>
+
+          <div class="cmplabel">Educación al cuidador</div>
+          <div class="cmpcell absent">Sección ausente en la nota del estudiante</div>
+          <div class="cmpcell"><mark class="good">Signos de alarma explicados a la madre</mark>: fiebre mayor a 48 horas, mal aspecto o somnolencia, petequias, rechazo de la vía oral, convulsión.</div>
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn primary" onclick="go(6)">Corregir la nota →</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 6: corrected note + new score ── -->
+    <div class="scene" id="s6">
       <div class="top"><span class="avatar">C3</span><h1>Nota corregida · segundo intento</h1></div>
       <div class="body">
         <div class="banner ok"><svg class="ic" width="15" height="15"><use href="#i-check"/></svg> Hallazgo crítico resuelto · Caso aprobado</div>
@@ -448,12 +517,12 @@
         </div>
       </div>
       <div class="footerbar">
-        <button class="btn primary" onclick="go(6)">Ver panel docente →</button>
+        <button class="btn primary" onclick="go(7)">Ver panel docente →</button>
       </div>
     </div>
 
-    <!-- ── Scene 6: faculty dashboard ── -->
-    <div class="scene" id="s6">
+    <!-- ── Scene 7: faculty dashboard ── -->
+    <div class="scene" id="s7">
       <div class="top"><h1>Panel docente · Semiología 2026-2</h1><span class="simchip">Datos simulados</span></div>
       <div class="body">
         <div class="kpis">
@@ -524,9 +593,9 @@
 </div>
 
 <script>
-const N = 7;
+const N = 8;
 let cur = 0, auto = false, autoTimer = null, clockTimer = null, sec = 0;
-const DUR = [6000, 16000, 9000, 8000, 14000, 9000, 11000]; // autoplay ms per scene
+const DUR = [6000, 16000, 9000, 9000, 14000, 12000, 9000, 11000]; // autoplay ms per scene
 
 const dots = document.getElementById('dots');
 for (let i = 0; i < N; i++) { const d = document.createElement('div'); d.className = 'dot'; dots.appendChild(d); }
@@ -607,19 +676,26 @@ function enterScene(i){
     });
   }
   if (i === 5){
+    const cells = scene.querySelectorAll('.cmpcell');
+    cells.forEach(c=>c.classList.remove('show'));
+    cells.forEach((c,k)=>setTimeout(()=>c.classList.add('show'), 500 + k*350));
+  }
+  if (i === 6){
     animateBars(scene);
     animateGauge('arc2','score2',96.8,1400);
   }
-  if (i === 6){ animateBars(scene); }
+  if (i === 7){ animateBars(scene); }
 }
 
 document.addEventListener('keydown', e=>{
+  // don't hijack keys while typing in the editable note
+  if (document.activeElement && document.activeElement.isContentEditable) return;
   if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
   if (e.key === 'ArrowLeft') prev();
   if (e.key.toLowerCase() === 'a') toggleAuto();
 });
 paintDots();
-// deep-link: open ...demo.html#4 to jump straight to a scene (0-6)
+// deep-link: open ...index.html#5 to jump straight to a scene (0-7)
 const h = parseInt(location.hash.slice(1), 10);
 if (!isNaN(h) && h >= 0 && h < N) go(h);
 </script>

@@ -19,7 +19,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SRC = "file://" + os.path.join(ROOT, "prototype", "index.html")
 OUT = os.path.join(ROOT, "demo.mp4")
 # autoplay scene durations in prototype/index.html (DUR array); keep in sync
-TOTAL_MS = 6000 + 16000 + 9000 + 8000 + 14000 + 9000 + 11000
+TOTAL_MS = 6000 + 16000 + 9000 + 9000 + 14000 + 12000 + 9000 + 11000
 
 with tempfile.TemporaryDirectory() as vid_dir:
     with sync_playwright() as p:
