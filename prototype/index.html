@@ -975,8 +975,9 @@ function createCase(){
 }
 
 document.addEventListener('keydown', e=>{
-  // don't hijack keys while typing in the editable note
-  if (document.activeElement && document.activeElement.isContentEditable) return;
+  // don't hijack keys while typing in the editable note or in any form field (e.g. the new-case modal)
+  const el = document.activeElement;
+  if (el && (el.isContentEditable || ['INPUT','TEXTAREA','SELECT'].includes(el.tagName))) return;
   if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
   if (e.key === 'ArrowLeft') prev();
   if (e.key.toLowerCase() === 'a') toggleAuto();
