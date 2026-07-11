@@ -74,7 +74,7 @@
        padding:11px 20px;display:inline-flex;align-items:center;gap:8px;}
   .btn.primary{background:var(--green);color:#fff;}
   .btn.ghost{background:transparent;color:var(--red);border:1px solid #EBC9C4;}
-  .btn.line{background:#fff;color:var(--ink);border:1px solid var(--border);}
+  .btn.outline{background:#fff;color:var(--ink);border:1px solid var(--border);}
   .wave{display:inline-flex;gap:2.5px;align-items:flex-end;height:14px;}
   .wave i{width:2.5px;background:var(--green);border-radius:2px;animation:wv 1s infinite ease-in-out;}
   .wave i:nth-child(2){animation-delay:.15s}.wave i:nth-child(3){animation-delay:.3s}
@@ -269,6 +269,10 @@
       <span class="chip done">● Aprobado · 84%</span>
     </div>
     <button class="newbtn" style="cursor:pointer;" onclick="openNewCase()">Nuevo caso +</button>
+    <button style="background:transparent;border:none;color:var(--soft);font-family:inherit;font-size:11px;
+                   padding:8px 4px 0;cursor:pointer;text-align:center;" onclick="openKeyModal()">
+      Configurar clave de IA
+    </button>
   </div>
 
   <!-- ══ Main ══ -->
@@ -312,10 +316,13 @@
             <span class="timer"><span class="recdot"></span><span id="clock">00:00</span></span>
           </div>
           <div class="body transcript" id="tr">
-            <div id="trhint" style="display:none;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:600px;">
-              Grabación en curso. La transcripción de demostración pertenece al caso 03; para un caso nuevo,
-              realiza la entrevista y continúa a redactar la nota SOAP.
+            <div id="trhint" style="display:none;font-size:12.5px;color:var(--muted);line-height:1.6;max-width:620px;margin-bottom:14px;">
+              Pulsa <b>Iniciar dictado</b> para transcribir la entrevista en vivo (requiere Chrome y micrófono).
+              Al finalizar, la nota SOAP se genera con IA si configuraste la clave; si no, la transcripción
+              pasa al componente S para que la estructures manualmente.
             </div>
+            <div id="livetr" style="display:none;font-size:13.5px;line-height:1.7;max-width:640px;color:#3C4234;"></div>
+            <div id="livestatus" style="display:none;font-size:12px;color:var(--amber);margin-top:12px;"></div>
             <div class="line est"><b>Estudiante:</b> Buenos días, soy la estudiante de medicina que va a atender a la bebé. Cuénteme, ¿qué le trae hoy a consulta?</div>
             <div class="line mad"><b>Madre:</b> Tiene fiebre desde ayer en la tarde, le llegó hasta 39 grados.</div>
             <div class="line est"><b>Estudiante:</b> ¿Ha notado tos, vómito, diarrea o rechazo a la alimentación?</div>
@@ -335,8 +342,11 @@
       </div>
       <div class="footerbar">
         <button class="btn ghost"><svg class="ic" width="13" height="13"><use href="#i-trash"/></svg> Descartar</button>
+        <button class="btn outline" id="micbtn" style="display:none;" onclick="toggleDictation()">
+          <svg class="ic" width="13" height="13"><use href="#i-mic"/></svg> <span id="miclabel">Iniciar dictado</span>
+        </button>
         <span class="wave"><i></i><i></i><i></i><i></i></span>
-        <button class="btn primary" onclick="go(3)"><svg class="ic" width="14" height="14"><use href="#i-sparkle"/></svg> Finalizar y generar nota</button>
+        <button class="btn primary" id="finishbtn" onclick="finishConsult()"><svg class="ic" width="14" height="14"><use href="#i-sparkle"/></svg> Finalizar y generar nota</button>
       </div>
     </div>
 
@@ -402,7 +412,7 @@
           </div></div>
       </div>
       <div class="footerbar">
-        <button class="btn line">Guardar borrador</button>
+        <button class="btn outline">Guardar borrador</button>
         <button class="btn primary" onclick="go(4)"><svg class="ic" width="14" height="14"><use href="#i-sparkle"/></svg> Enviar a retroalimentación</button>
       </div>
     </div>
@@ -612,7 +622,7 @@
         </div>
       </div>
       <div class="footerbar">
-        <button class="btn line" onclick="go(0)">Reiniciar demo</button>
+        <button class="btn outline" onclick="go(0)">Reiniciar demo</button>
       </div>
     </div>
 
@@ -638,8 +648,28 @@
       </div>
       <div class="fld"><label>Motivo de consulta</label><input id="ncMotivo" placeholder="Dolor abdominal de 12 horas"></div>
       <div style="display:flex;justify-content:flex-end;gap:10px;margin-top:16px;">
-        <button class="btn line" onclick="closeNewCase()">Cancelar</button>
+        <button class="btn outline" onclick="closeNewCase()">Cancelar</button>
         <button class="btn primary" onclick="createCase()">Crear caso</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API key modal -->
+  <div class="modal" id="keymodal">
+    <div class="mcard">
+      <h2>Clave de IA para la generación de notas</h2>
+      <p style="font-size:12.5px;color:var(--muted);line-height:1.6;margin-bottom:14px;">
+        Con una clave de la API de Anthropic, la transcripción de la consulta se convierte en una
+        nota SOAP real. La clave se guarda únicamente en este navegador (localStorage): nunca entra
+        al repositorio ni sale de tu equipo salvo hacia la API.
+      </p>
+      <div class="fld"><label>Clave (sk-ant-…)</label><input id="keyinput" type="password" placeholder="sk-ant-api03-…"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
+        <button class="btn outline" onclick="clearKey()" style="color:var(--red);border-color:#EBC9C4;">Borrar clave</button>
+        <div style="display:flex;gap:10px;">
+          <button class="btn outline" onclick="closeKeyModal()">Cancelar</button>
+          <button class="btn primary" onclick="saveKey()">Guardar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -711,10 +741,15 @@ function enterScene(i){
     clockTimer = setInterval(()=>{ sec++;
       clock.textContent = String(Math.floor(sec/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0');
     }, 1000);
-    const lines = scene.querySelectorAll('.line');
-    document.getElementById('trhint').style.display = caseMeta.custom ? '' : 'none';
-    lines.forEach(l=>{ l.classList.remove('show'); l.style.display = caseMeta.custom ? 'none' : ''; });
-    if (!caseMeta.custom) lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
+    // scope to the transcript container: footer buttons also carry a `line` class
+    const lines = document.querySelectorAll('#tr .line');
+    const custom = caseMeta.custom;
+    document.getElementById('trhint').style.display = custom ? '' : 'none';
+    document.getElementById('micbtn').style.display = custom ? '' : 'none';
+    document.getElementById('livetr').style.display = custom ? '' : 'none';
+    if (custom) renderLive('');
+    lines.forEach(l=>{ l.classList.remove('show'); l.style.display = custom ? 'none' : ''; });
+    if (!custom) lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
   }
   if (i === 2 && !importedName){
     const dz = document.getElementById('dz'), fc = document.getElementById('filechip');
@@ -812,8 +847,15 @@ function renderNote(){
       '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">Texto extraído del documento. ' +
       'Edítalo libremente: la retroalimentación se ejecuta sobre este contenido.</p>';
   } else if (caseMeta.custom){
-    const secs = [
-      ['S · Subjetivo', caseMeta.motivo ? '"' + caseMeta.motivo + '". ' : ''],
+    const gs = generatedSOAP;
+    const secs = gs ? [
+      ['S · Subjetivo', gs.s || ''],
+      ['O · Objetivo', gs.o || ''],
+      ['A · Análisis', gs.a || ''],
+      ['P · Plan', gs.p || ''],
+    ] : [
+      ['S · Subjetivo', (caseMeta.motivo ? '"' + caseMeta.motivo + '". ' : '') +
+        (liveTranscript.trim() ? 'Transcripción de la entrevista: ' + liveTranscript.trim() : '')],
       ['O · Objetivo', caseMeta.weight ? 'Peso: ' + caseMeta.weight + ' kg. ' : ''],
       ['A · Análisis', ''],
       ['P · Plan', ''],
@@ -821,8 +863,10 @@ function renderNote(){
     noteBody.innerHTML = secs.map(([h, c])=>
       '<div class="sect"><h2>' + h + '</h2>' +
       '<div class="txt" contenteditable="true" spellcheck="false">' + esc(c) + '</div></div>').join('') +
-      '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">Nota SOAP del caso nuevo. ' +
-      'Redacta cada componente: la retroalimentación evalúa este contenido.</p>';
+      '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">' +
+      (gs ? 'Nota SOAP generada con IA a partir de la transcripción. Revísala y edítala: la retroalimentación evalúa este contenido.'
+          : 'Nota SOAP del caso nuevo. Redacta cada componente: la retroalimentación evalúa este contenido.') +
+      '</p>';
   } else {
     noteBody.innerHTML = NOTE_DEFAULT;
   }
@@ -953,6 +997,7 @@ function createCase(){
   const motivo = document.getElementById('ncMotivo').value.trim();
   caseMeta = { custom:true, title, spec, amb, age, weight, motivo };
   importedText = null; importedName = null; renderedFor = null;
+  liveTranscript = ''; generatedSOAP = null;
   document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
   const card = document.createElement('div');
   card.className = 'case active';
@@ -972,6 +1017,128 @@ function createCase(){
   document.getElementById('s3title').textContent = title + ' · nota SOAP del estudiante';
   closeNewCase();
   go(0);
+}
+
+/* ── live dictation (Web Speech API) + AI note generation ── */
+let liveTranscript = '', generatedSOAP = null, recog = null, recogActive = false;
+const FINISH_HTML = document.getElementById('finishbtn').innerHTML;
+
+function setLiveStatus(msg){
+  const el = document.getElementById('livestatus');
+  el.textContent = msg || '';
+  el.style.display = msg ? '' : 'none';
+}
+function renderLive(interim){
+  const el = document.getElementById('livetr');
+  el.innerHTML = esc(liveTranscript) +
+    (interim ? '<span style="color:var(--soft);">' + esc(interim) + '</span>' : '');
+}
+function updateMicBtn(){
+  document.getElementById('miclabel').textContent = recogActive ? 'Detener dictado' : 'Iniciar dictado';
+}
+function toggleDictation(){
+  if (recogActive){ recogActive = false; if (recog) recog.stop(); updateMicBtn(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR){ setLiveStatus('Este navegador no soporta reconocimiento de voz. Usa Chrome de escritorio.'); return; }
+  recog = new SR();
+  recog.lang = 'es-CO';
+  recog.continuous = true;
+  recog.interimResults = true;
+  recog.onresult = e => {
+    let interim = '';
+    for (let i = e.resultIndex; i < e.results.length; i++){
+      const r = e.results[i];
+      if (r.isFinal) liveTranscript += r[0].transcript + ' ';
+      else interim += r[0].transcript;
+    }
+    setLiveStatus('');
+    renderLive(interim);
+  };
+  recog.onerror = e => {
+    if (e.error === 'not-allowed') setLiveStatus('Permiso de micrófono denegado. Habilítalo en la barra de dirección.');
+    else if (e.error !== 'no-speech') setLiveStatus('Error de reconocimiento: ' + e.error);
+  };
+  recog.onend = () => { if (recogActive){ try { recog.start(); } catch(_){} } else updateMicBtn(); };
+  recogActive = true;
+  try { recog.start(); setLiveStatus(''); }
+  catch(err){ recogActive = false; setLiveStatus('No se pudo iniciar el micrófono: ' + err.message); }
+  updateMicBtn();
+}
+
+/* API key: stored only in this browser's localStorage, never in the repo */
+function openKeyModal(){
+  document.getElementById('keyinput').value = localStorage.getItem('tp_api_key') || '';
+  document.getElementById('keymodal').classList.add('on');
+}
+function closeKeyModal(){ document.getElementById('keymodal').classList.remove('on'); }
+function saveKey(){
+  const v = document.getElementById('keyinput').value.trim();
+  if (v) localStorage.setItem('tp_api_key', v);
+  closeKeyModal();
+}
+function clearKey(){ localStorage.removeItem('tp_api_key'); document.getElementById('keyinput').value = ''; }
+
+async function finishConsult(){
+  if (!caseMeta.custom){ go(3); return; }
+  if (recogActive) toggleDictation();
+  const key = localStorage.getItem('tp_api_key');
+  if (liveTranscript.trim() && key) await generateSoapNote(key);
+  renderedFor = null; // force the note to re-render with the new transcript / generated content
+  go(3);
+}
+
+async function generateSoapNote(key){
+  const btn = document.getElementById('finishbtn');
+  btn.disabled = true;
+  btn.textContent = 'Generando nota…';
+  try {
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-4-8',
+        max_tokens: 2000,
+        system: 'Eres el motor de notas clínicas de Telepatía Learning. A partir de la transcripción de una ' +
+          'consulta simulada realizada por un estudiante de medicina, redacta una nota clínica en formato SOAP ' +
+          'en español. Usa únicamente la información presente en la transcripción, sin inventar hallazgos ni ' +
+          'resultados. Si un componente no tiene información en la transcripción, escribe "No consignado en la ' +
+          'entrevista.". Si se menciona el peso del paciente, inclúyelo en O como "Peso: X kg".',
+        output_config: { format: { type: 'json_schema', schema: {
+          type: 'object',
+          properties: {
+            s: { type: 'string', description: 'Subjetivo: motivo de consulta y enfermedad actual' },
+            o: { type: 'string', description: 'Objetivo: examen físico y signos vitales' },
+            a: { type: 'string', description: 'Análisis: razonamiento clínico y diagnóstico' },
+            p: { type: 'string', description: 'Plan: tratamiento, educación al paciente y seguimiento' },
+          },
+          required: ['s', 'o', 'a', 'p'],
+          additionalProperties: false,
+        } } },
+        messages: [{ role: 'user', content:
+          'Caso: ' + caseMeta.title +
+          (caseMeta.age ? ' · Edad: ' + caseMeta.age : '') +
+          (caseMeta.weight ? ' · Peso: ' + caseMeta.weight + ' kg' : '') +
+          '\n\nTranscripción de la consulta:\n' + liveTranscript.trim() }],
+      }),
+    });
+    const data = await res.json();
+    if (data.type === 'error') throw new Error(data.error.message);
+    if (data.stop_reason === 'refusal') throw new Error('la solicitud fue rechazada');
+    const textBlock = (data.content || []).find(b => b.type === 'text');
+    if (!textBlock) throw new Error('respuesta sin contenido');
+    generatedSOAP = JSON.parse(textBlock.text);
+    setLiveStatus('');
+  } catch(err){
+    generatedSOAP = null;
+    setLiveStatus('No se pudo generar la nota (' + err.message + '). La transcripción pasa al componente S.');
+  }
+  btn.disabled = false;
+  btn.innerHTML = FINISH_HTML;
 }
 
 document.addEventListener('keydown', e=>{

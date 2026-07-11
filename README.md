@@ -28,6 +28,21 @@ three planted errors → formative feedback (score gauge, per-section bars,
 guideline-cited findings, red-severity gating) → corrected note → faculty
 panel with cohort pain points and suggested teaching sessions.
 
+## Live dictation and AI note generation (new cases)
+
+In a new case's consultation, "Iniciar dictado" transcribes the interview live
+using Chrome's speech recognition (Spanish; requires mic permission and
+internet). On "Finalizar y generar nota":
+
+- With an Anthropic API key configured ("Configurar clave de IA" in the
+  sidebar), the transcript is sent to the Claude API and a real SOAP note is
+  generated and loaded into the editable note.
+- Without a key, the transcript lands in the S component to structure manually.
+
+The key is stored only in the browser's localStorage: it is never committed to
+this repository. Use a personal/workspace-scoped key and revoke it after the
+demo if the laptop is shared.
+
 ## Rendering the demo video
 
 ```bash
