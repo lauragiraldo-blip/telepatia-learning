@@ -35,6 +35,8 @@
   .case .del{position:absolute;top:6px;right:8px;background:transparent;border:none;cursor:pointer;
              color:var(--soft);font-size:15px;line-height:1;padding:2px 4px;font-family:inherit;}
   .case .del:hover{color:var(--red);}
+  .case.switchable{cursor:pointer;}
+  .case.switchable:hover{border-color:#8AA285;}
   .case .t{font-weight:600;font-size:13px;margin-bottom:5px;}
   .case .sub{font-size:11px;color:var(--muted);margin-bottom:6px;}
   .chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;
@@ -258,7 +260,7 @@
   <div class="side">
     <div class="brand"><span class="word">telepatia</span><span class="mode">Learning</span></div>
     <div class="search"><svg class="ic" width="13" height="13"><use href="#i-search"/></svg> Buscar caso</div>
-    <div class="case active">
+    <div class="case active switchable" onclick="activateCase('default', this)">
       <div class="t">Caso 03 · Lactante febril</div>
       <div class="sub">Pediatría · Semiología</div>
       <span class="chip pend">● En curso</span>
@@ -1000,27 +1002,23 @@ function createCase(){
   const age = document.getElementById('ncAge').value.trim();
   const weight = parseFloat(String(document.getElementById('ncWeight').value).replace(',','.')) || null;
   const motivo = document.getElementById('ncMotivo').value.trim();
+  snapshotCurrent();
   caseMeta = { custom:true, title, spec, amb, age, weight, motivo };
   importedText = null; importedName = null; renderedFor = null;
   liveTranscript = ''; generatedSOAP = null;
+  const id = 'case' + (nextCaseId++);
+  currentCaseId = id;
   document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
   const card = document.createElement('div');
-  card.className = 'case active customcase';
+  card.className = 'case active customcase switchable';
+  card.dataset.caseId = id;
   card.innerHTML = '<button class="del" onclick="deleteCase(event, this)" title="Eliminar caso">&times;</button>' +
                    '<div class="t">' + esc(title) + '</div><div class="sub">' + esc(spec) +
                    '</div><span class="chip pend">● En curso</span>';
+  card.onclick = function(){ activateCase(id, card); };
   const first = document.querySelector('.side .case');
   first.parentNode.insertBefore(card, first);
-  document.getElementById('briefTitle').textContent = title;
-  document.getElementById('briefDesc').textContent =
-    (motivo ? 'Motivo de consulta: ' + motivo + '. ' : '') +
-    'Realiza la entrevista, el examen físico dirigido y elabora la historia clínica en formato SOAP con tu plan de manejo.';
-  document.getElementById('briefMeta').innerHTML =
-    (age || weight ? '<span class="mchip">' + esc([age, weight ? weight + ' kg' : ''].filter(Boolean).join(' · ')) + '</span>' : '') +
-    '<span class="mchip">' + esc(amb) + '</span><span class="mchip">' + esc(spec) +
-    '</span><span class="mchip">Guías: institucional</span>';
-  document.getElementById('s1title').textContent = title;
-  document.getElementById('s3title').textContent = title + ' · nota SOAP del estudiante';
+  applyCaseChrome();
   closeNewCase();
   go(0);
 }
@@ -1034,18 +1032,74 @@ const BRIEF_DEFAULT = {
   s3: document.getElementById('s3title').textContent,
 };
 
+/* per-case state: each case keeps its own note, transcript, and generated content */
+let caseStates = {}, currentCaseId = 'default', nextCaseId = 1;
+
+function snapshotCurrent(){
+  caseStates[currentCaseId] = {
+    caseMeta, liveTranscript, generatedSOAP, importedText, importedName,
+    noteHTML: noteBody.innerHTML, renderedFor,
+  };
+}
+
+function applyCaseChrome(){
+  if (caseMeta.custom){
+    const m = caseMeta;
+    document.getElementById('briefTitle').textContent = m.title;
+    document.getElementById('briefDesc').textContent =
+      (m.motivo ? 'Motivo de consulta: ' + m.motivo + '. ' : '') +
+      'Realiza la entrevista, el examen físico dirigido y elabora la historia clínica en formato SOAP con tu plan de manejo.';
+    document.getElementById('briefMeta').innerHTML =
+      (m.age || m.weight ? '<span class="mchip">' + esc([m.age, m.weight ? m.weight + ' kg' : ''].filter(Boolean).join(' · ')) + '</span>' : '') +
+      '<span class="mchip">' + esc(m.amb || 'Ambulatorio') + '</span><span class="mchip">' + esc(m.spec || '') +
+      '</span><span class="mchip">Guías: institucional</span>';
+    document.getElementById('s1title').textContent = m.title;
+    document.getElementById('s3title').textContent = m.title + ' · nota SOAP del estudiante';
+  } else {
+    document.getElementById('briefTitle').textContent = BRIEF_DEFAULT.title;
+    document.getElementById('briefDesc').textContent = BRIEF_DEFAULT.desc;
+    document.getElementById('briefMeta').innerHTML = BRIEF_DEFAULT.meta;
+    document.getElementById('s1title').textContent = BRIEF_DEFAULT.s1;
+    document.getElementById('s3title').textContent = BRIEF_DEFAULT.s3;
+  }
+}
+
+function activateCase(id, card){
+  if (id === currentCaseId) return;
+  if (recogActive) toggleDictation();
+  snapshotCurrent();
+  const s = caseStates[id];
+  currentCaseId = id;
+  if (s){
+    caseMeta = s.caseMeta;
+    liveTranscript = s.liveTranscript;
+    generatedSOAP = s.generatedSOAP;
+    importedText = s.importedText;
+    importedName = s.importedName;
+    noteBody.innerHTML = s.noteHTML;
+    renderedFor = s.renderedFor;
+  } else {
+    caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
+    importedText = null; importedName = null; renderedFor = null;
+    liveTranscript = ''; generatedSOAP = null;
+  }
+  document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
+  card.classList.add('active');
+  document.getElementById('livetr').innerHTML = '';
+  setLiveStatus('');
+  applyCaseChrome();
+  go(0);
+}
+
 function resetDemo(){
   if (recogActive) toggleDictation();
   document.querySelectorAll('.side .case.customcase').forEach(c=>c.remove());
   document.querySelectorAll('.side .case').forEach((c,k)=>c.classList.toggle('active', k===0));
+  caseStates = {}; currentCaseId = 'default';
   caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
   importedText = null; importedName = null; renderedFor = null;
   liveTranscript = ''; generatedSOAP = null;
-  document.getElementById('briefTitle').textContent = BRIEF_DEFAULT.title;
-  document.getElementById('briefDesc').textContent = BRIEF_DEFAULT.desc;
-  document.getElementById('briefMeta').innerHTML = BRIEF_DEFAULT.meta;
-  document.getElementById('s1title').textContent = BRIEF_DEFAULT.s1;
-  document.getElementById('s3title').textContent = BRIEF_DEFAULT.s3;
+  applyCaseChrome();
   document.getElementById('livetr').innerHTML = '';
   document.getElementById('pvwrap').style.display = 'none';
   setLiveStatus('');
@@ -1055,9 +1109,16 @@ function resetDemo(){
 function deleteCase(e, btn){
   e.stopPropagation();
   const card = btn.closest('.case');
+  const id = card.dataset.caseId;
   const wasActive = card.classList.contains('active');
+  delete caseStates[id];
   card.remove();
-  if (wasActive) resetDemo();
+  if (wasActive){
+    currentCaseId = '__deleted__';
+    delete caseStates['__deleted__'];
+    activateCase('default', document.querySelector('.side .case'));
+    delete caseStates['__deleted__'];
+  }
 }
 
 /* ── live dictation (Web Speech API) + AI note generation ── */
