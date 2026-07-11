@@ -30,8 +30,11 @@
                background:var(--chip-green-bg);color:var(--chip-green-tx);padding:3px 8px;border-radius:999px;}
   .search{background:#FAFAF3;border:1px solid var(--border);border-radius:9px;padding:8px 12px;
           font-size:12.5px;color:var(--soft);margin-bottom:12px;display:flex;gap:7px;align-items:center;}
-  .case{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;margin-bottom:9px;}
+  .case{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;margin-bottom:9px;position:relative;}
   .case.active{border:1.5px solid var(--green);}
+  .case .del{position:absolute;top:6px;right:8px;background:transparent;border:none;cursor:pointer;
+             color:var(--soft);font-size:15px;line-height:1;padding:2px 4px;font-family:inherit;}
+  .case .del:hover{color:var(--red);}
   .case .t{font-weight:600;font-size:13px;margin-bottom:5px;}
   .case .sub{font-size:11px;color:var(--muted);margin-bottom:6px;}
   .chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;
@@ -622,7 +625,7 @@
         </div>
       </div>
       <div class="footerbar">
-        <button class="btn outline" onclick="go(0)">Reiniciar demo</button>
+        <button class="btn outline" onclick="resetDemo()">Reiniciar demo</button>
       </div>
     </div>
 
@@ -1000,8 +1003,9 @@ function createCase(){
   liveTranscript = ''; generatedSOAP = null;
   document.querySelectorAll('.side .case').forEach(c=>c.classList.remove('active'));
   const card = document.createElement('div');
-  card.className = 'case active';
-  card.innerHTML = '<div class="t">' + esc(title) + '</div><div class="sub">' + esc(spec) +
+  card.className = 'case active customcase';
+  card.innerHTML = '<button class="del" onclick="deleteCase(event, this)" title="Eliminar caso">&times;</button>' +
+                   '<div class="t">' + esc(title) + '</div><div class="sub">' + esc(spec) +
                    '</div><span class="chip pend">● En curso</span>';
   const first = document.querySelector('.side .case');
   first.parentNode.insertBefore(card, first);
@@ -1017,6 +1021,41 @@ function createCase(){
   document.getElementById('s3title').textContent = title + ' · nota SOAP del estudiante';
   closeNewCase();
   go(0);
+}
+
+/* ── demo reset: delete created cases and restore the default caso 03 state ── */
+const BRIEF_DEFAULT = {
+  title: document.getElementById('briefTitle').textContent,
+  desc: document.getElementById('briefDesc').textContent,
+  meta: document.getElementById('briefMeta').innerHTML,
+  s1: document.getElementById('s1title').textContent,
+  s3: document.getElementById('s3title').textContent,
+};
+
+function resetDemo(){
+  if (recogActive) toggleDictation();
+  document.querySelectorAll('.side .case.customcase').forEach(c=>c.remove());
+  document.querySelectorAll('.side .case').forEach((c,k)=>c.classList.toggle('active', k===0));
+  caseMeta = { custom:false, title:'Caso 03 · Lactante febril', weight:11 };
+  importedText = null; importedName = null; renderedFor = null;
+  liveTranscript = ''; generatedSOAP = null;
+  document.getElementById('briefTitle').textContent = BRIEF_DEFAULT.title;
+  document.getElementById('briefDesc').textContent = BRIEF_DEFAULT.desc;
+  document.getElementById('briefMeta').innerHTML = BRIEF_DEFAULT.meta;
+  document.getElementById('s1title').textContent = BRIEF_DEFAULT.s1;
+  document.getElementById('s3title').textContent = BRIEF_DEFAULT.s3;
+  document.getElementById('livetr').innerHTML = '';
+  document.getElementById('pvwrap').style.display = 'none';
+  setLiveStatus('');
+  go(0);
+}
+
+function deleteCase(e, btn){
+  e.stopPropagation();
+  const card = btn.closest('.case');
+  const wasActive = card.classList.contains('active');
+  card.remove();
+  if (wasActive) resetDemo();
 }
 
 /* ── live dictation (Web Speech API) + AI note generation ── */
