@@ -326,13 +326,18 @@
       <div class="top"><h1>Vía de entrada alternativa · Historia manuscrita</h1></div>
       <div class="upwrap">
         <div class="upcard">
-          <div class="drop" id="dz">
+          <input type="file" id="fileinput" accept="application/pdf,image/*" style="display:none">
+          <div class="drop" id="dz" onclick="document.getElementById('fileinput').click()" style="cursor:pointer;">
             <svg class="ic" width="20" height="20"><use href="#i-clip"/></svg>
             Arrastra o haz clic para adjuntar la historia clínica (PDF o foto)
           </div>
           <div class="filechip" id="filechip">
             <svg class="ic" width="16" height="16" style="color:var(--green);"><use href="#i-file"/></svg>
-            historia_caso03_manuscrita.pdf <span class="sz">· 2 páginas · 1.8 MB</span>
+            <span id="fcname">historia_caso03_manuscrita.pdf</span> <span class="sz" id="fcmeta">· 2 páginas · 1.8 MB</span>
+          </div>
+          <div id="pvwrap" style="display:none;margin-top:12px;">
+            <canvas id="pv" style="max-width:200px;max-height:140px;border:1px solid var(--border);border-radius:8px;background:#fff;"></canvas>
+            <img id="pvimg" style="display:none;max-width:200px;max-height:140px;border:1px solid var(--border);border-radius:8px;" alt="">
           </div>
           <div class="ocr" id="ocr">
             <div class="st" id="ocrstatus">Digitalizando manuscrito…</div>
@@ -387,7 +392,7 @@
     <div class="scene" id="s4">
       <div class="top"><span class="avatar">C3</span><h1>Retroalimentación del caso</h1></div>
       <div class="body">
-        <div class="banner bad"><svg class="ic" width="15" height="15"><use href="#i-alert"/></svg> Hallazgo crítico abierto: el caso no puede aprobarse hasta resolverlo.</div>
+        <div class="banner bad" id="fbbanner"><svg class="ic" width="15" height="15"><use href="#i-alert"/></svg> Hallazgo crítico abierto: el caso no puede aprobarse hasta resolverlo.</div>
         <div class="scorewrap" style="margin-bottom:22px;">
           <div class="gauge">
             <svg width="150" height="150" viewBox="0 0 150 150">
@@ -396,7 +401,7 @@
                       stroke-linecap="round" stroke-dasharray="389.5" stroke-dashoffset="389.5"/>
             </svg>
             <div class="num" id="score1">0%</div>
-            <div class="lab" style="color:var(--red);">DEFICIENTE</div>
+            <div class="lab" id="lab1" style="color:var(--red);">DEFICIENTE</div>
           </div>
           <div class="bars">
             <div class="brow"><div class="bt"><span>Identificación y anamnesis</span><span>86%</span></div>
@@ -405,10 +410,10 @@
               <div class="track"><div class="fill" data-w="92%" style="background:var(--green);"></div></div></div>
             <div class="brow"><div class="bt"><span>Diagnóstico</span><span>100%</span></div>
               <div class="track"><div class="fill" data-w="100%" style="background:var(--green);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Plan y tratamiento</span><span>38%</span></div>
-              <div class="track"><div class="fill" data-w="38%" style="background:var(--orange-bar);"></div></div></div>
-            <div class="brow"><div class="bt"><span>Educación al cuidador</span><span>0%</span></div>
-              <div class="track"><div class="fill" data-w="3%" style="background:var(--red);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Plan y tratamiento</span><span id="planPct">38%</span></div>
+              <div class="track"><div class="fill" id="planFill" data-w="38%" style="background:var(--orange-bar);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Educación al cuidador</span><span id="eduPct">0%</span></div>
+              <div class="track"><div class="fill" id="eduFill" data-w="3%" style="background:var(--red);"></div></div></div>
           </div>
         </div>
 
@@ -425,7 +430,7 @@
         <div class="finding" id="f2">
           <div class="tag amber"><svg class="ic" width="12" height="12"><use href="#i-alert"/></svg> DOSIS INCORRECTA · MEDICAMENTO</div>
           <h3>Ajustar acetaminofén a 10–15 mg/kg/dosis</h3>
-          <p>Prescribiste 10 ml de jarabe 150 mg/5 ml = 300 mg por dosis (27 mg/kg para 11 kg).
+          <p id="f2p">Prescribiste 10 ml de jarabe 150 mg/5 ml = 300 mg por dosis (27 mg/kg para 11 kg).
              La dosis recomendada es 110–165 mg, es decir 3.5–5.5 ml cada 6 horas.
              La sobredosificación repetida de acetaminofén es la primera causa de hepatotoxicidad medicamentosa en pediatría.</p>
           <span class="cite"><svg class="ic" width="12" height="12"><use href="#i-book"/></svg> Guía institucional de analgesia pediátrica · dosificación por peso</span>
@@ -653,7 +658,7 @@ function enterScene(i){
     lines.forEach(l=>l.classList.remove('show'));
     lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
   }
-  if (i === 2){
+  if (i === 2 && !importedName){
     const dz = document.getElementById('dz'), fc = document.getElementById('filechip');
     const ocr = document.getElementById('ocr'), bar = document.getElementById('ocrbar');
     const st = document.getElementById('ocrstatus');
@@ -667,10 +672,42 @@ function enterScene(i){
     setTimeout(()=>{ bar.style.width='100%'; st.classList.add('okst');
       st.innerHTML = CHECK_SVG + 'Nota estructurada lista para retroalimentación'; }, 6200);
   }
+  if (i === 3){
+    const want = importedText ? importedName : 'default';
+    if (want !== renderedFor){ renderNote(); renderedFor = want; }
+  }
   if (i === 4){
+    const a = auditNote();
+    const fb = document.getElementById('fbbanner');
+    if (a.f1){ fb.className = 'banner bad';
+      fb.innerHTML = ALERT_SVG + ' Hallazgo crítico abierto: el caso no puede aprobarse hasta resolverlo.'; }
+    else if (a.f2 || a.f3){ fb.className = 'banner ok';
+      fb.innerHTML = CHECK_SVG + ' Sin hallazgos críticos. Quedan oportunidades de mejora en el plan.'; }
+    else { fb.className = 'banner ok';
+      fb.innerHTML = CHECK_SVG + ' Sin hallazgos: la nota cumple el estándar del caso.'; }
+    ['f1','f2','f3'].forEach(id=>{
+      document.getElementById(id).style.display = a[id] ? '' : 'none';
+    });
+    if (a.f2 && a.dose){
+      document.getElementById('f2p').textContent = a.dose.desc +
+        ' La sobredosificación repetida de acetaminofén es la primera causa de hepatotoxicidad medicamentosa en pediatría.';
+    }
+    document.getElementById('planPct').textContent = a.plan + '%';
+    const pf = document.getElementById('planFill');
+    pf.dataset.w = a.plan + '%';
+    pf.style.background = a.plan >= 90 ? 'var(--green)' : (a.plan >= 60 ? 'var(--orange-bar)' : 'var(--red)');
+    document.getElementById('eduPct').textContent = a.edu + '%';
+    const ef = document.getElementById('eduFill');
+    ef.dataset.w = Math.max(a.edu, 3) + '%';
+    ef.style.background = a.edu >= 90 ? 'var(--green)' : 'var(--red)';
+    const col = a.total >= 90 ? 'var(--green)' : (a.total >= 70 ? 'var(--amber)' : 'var(--red)');
+    const lab = document.getElementById('lab1');
+    lab.textContent = a.total >= 90 ? 'SOBRESALIENTE' : (a.total >= 70 ? 'ACEPTABLE' : 'DEFICIENTE');
+    lab.style.color = col;
+    document.getElementById('arc1').style.stroke = col;
     animateBars(scene);
-    animateGauge('arc1','score1',62.4,1400);
-    ['f1','f2','f3'].forEach((id,k)=>{
+    animateGauge('arc1','score1',a.total,1400);
+    ['f1','f2','f3'].filter(id=>a[id]).forEach((id,k)=>{
       const f = document.getElementById(id); f.classList.remove('show');
       setTimeout(()=>f.classList.add('show'), 900 + k*650);
     });
@@ -685,6 +722,133 @@ function enterScene(i){
     animateGauge('arc2','score2',96.8,1400);
   }
   if (i === 7){ animateBars(scene); }
+}
+
+/* ── real file upload + text extraction (pdf.js) ── */
+const ALERT_SVG = '<svg class="ic" width="15" height="15"><use href="#i-alert"/></svg>';
+let importedText = null, importedName = null, renderedFor = 'default';
+const noteBody = document.querySelector('#s3 .body');
+const NOTE_DEFAULT = noteBody.innerHTML;
+
+function renderNote(){
+  if (importedText){
+    const safeName = importedName.replace(/</g,'&lt;');
+    const safeText = importedText.replace(/</g,'&lt;');
+    noteBody.innerHTML =
+      '<div class="sect"><h2>Nota importada · ' + safeName + '</h2>' +
+      '<div class="txt" contenteditable="true" spellcheck="false">' + safeText + '</div></div>' +
+      '<p style="font-size:11.5px;color:var(--muted);margin-top:10px;">Texto extraído del documento. ' +
+      'Edítalo libremente: la retroalimentación se ejecuta sobre este contenido.</p>';
+  } else {
+    noteBody.innerHTML = NOTE_DEFAULT;
+  }
+}
+
+function loadPdfJs(){
+  if (window.pdfjsLib) return Promise.resolve();
+  return new Promise((res, rej)=>{
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+    s.onload = ()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; res(); };
+    s.onerror = ()=>rej(new Error('sin conexión para cargar el lector de PDF'));
+    document.head.appendChild(s);
+  });
+}
+
+async function handleFile(file){
+  const fc = document.getElementById('filechip'), ocr = document.getElementById('ocr');
+  const bar = document.getElementById('ocrbar'), st = document.getElementById('ocrstatus');
+  const pvwrap = document.getElementById('pvwrap'), pv = document.getElementById('pv'),
+        pvimg = document.getElementById('pvimg');
+  const mb = (file.size/1048576).toFixed(1);
+  document.getElementById('fcname').textContent = file.name;
+  document.getElementById('fcmeta').textContent = '· ' + mb + ' MB';
+  fc.classList.add('show'); ocr.classList.add('show');
+  st.classList.remove('okst'); bar.style.width = '15%';
+  importedText = null; importedName = file.name;
+  try {
+    if (file.type === 'application/pdf' || /\.pdf$/i.test(file.name)){
+      st.textContent = 'Leyendo PDF…';
+      await loadPdfJs();
+      const pdf = await pdfjsLib.getDocument({data: await file.arrayBuffer()}).promise;
+      document.getElementById('fcmeta').textContent = '· ' + pdf.numPages + ' página' + (pdf.numPages>1?'s':'') + ' · ' + mb + ' MB';
+      const page = await pdf.getPage(1);
+      const vp = page.getViewport({scale: 0.35});
+      pv.width = vp.width; pv.height = vp.height;
+      await page.render({canvasContext: pv.getContext('2d'), viewport: vp}).promise;
+      pv.style.display = ''; pvimg.style.display = 'none'; pvwrap.style.display = '';
+      bar.style.width = '55%'; st.textContent = 'Extrayendo texto…';
+      let text = '';
+      for (let p = 1; p <= Math.min(pdf.numPages, 5); p++){
+        const tc = await (await pdf.getPage(p)).getTextContent();
+        text += tc.items.map(it=>it.str).join(' ') + '\n';
+      }
+      text = text.replace(/[ \t]+/g,' ').trim();
+      bar.style.width = '100%'; st.classList.add('okst');
+      if (text.length > 40){
+        importedText = text;
+        st.innerHTML = CHECK_SVG + 'Texto extraído (' + text.length +
+          ' caracteres). Continúa a la nota para revisarlo y enviarlo a retroalimentación.';
+      } else {
+        st.innerHTML = CHECK_SVG + 'PDF sin capa de texto (manuscrito escaneado). En producción pasa por OCR; ' +
+          'el prototipo continúa con la nota del caso.';
+      }
+    } else if (file.type.startsWith('image/')){
+      pvimg.src = URL.createObjectURL(file);
+      pvimg.style.display = ''; pv.style.display = 'none'; pvwrap.style.display = '';
+      bar.style.width = '100%'; st.classList.add('okst');
+      st.innerHTML = CHECK_SVG + 'Imagen cargada. En producción el manuscrito pasa por OCR; ' +
+        'el prototipo continúa con la nota del caso.';
+    } else {
+      bar.style.width = '100%';
+      st.textContent = 'Formato no compatible en el prototipo: usa PDF o imagen.';
+    }
+  } catch(err){
+    bar.style.width = '100%';
+    st.textContent = 'No se pudo leer el archivo (' + err.message + '). El prototipo continúa con la nota del caso.';
+  }
+}
+
+const dzEl = document.getElementById('dz'), fileInput = document.getElementById('fileinput');
+['dragover','dragenter'].forEach(ev=>dzEl.addEventListener(ev, e=>{ e.preventDefault(); dzEl.classList.add('hot'); }));
+dzEl.addEventListener('dragleave', ()=>dzEl.classList.remove('hot'));
+dzEl.addEventListener('drop', e=>{ e.preventDefault(); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); });
+fileInput.addEventListener('change', ()=>{ if (fileInput.files[0]) handleFile(fileInput.files[0]); });
+
+/* ── demo rule engine: audits whatever text is in the note ── */
+function auditNote(){
+  const t = noteBody.innerText.toLowerCase();
+  const wm = t.match(/peso[:\s]*([\d.,]+)\s*kg/);
+  const kg = wm ? parseFloat(wm[1].replace(',','.')) : 11;
+  const f1 = !/signos? de alarma|signos? de peligro/.test(t);
+  let f2 = false, dose = null;
+  // concentration (e.g. 150 mg/5 ml), then strip it so it can't be mistaken for the dose
+  const cm = t.match(/([\d.,]+)\s*mg\s*\/\s*([\d.,]+)\s*ml/);
+  const mgml = cm ? parseFloat(cm[1].replace(',','.'))/parseFloat(cm[2].replace(',','.')) : 30;
+  const clean = t.replace(/[\d.,]+\s*mg\s*\/\s*[\d.,]+\s*ml/g, ' CONC ');
+  const amMl = clean.match(/(acetaminof[eé]n|paracetamol)[^]{0,80}?([\d.,]+)\s*ml/);
+  const amMg = clean.match(/(acetaminof[eé]n|paracetamol)[^]{0,80}?([\d.,]+)\s*mg\b/);
+  if (amMl || amMg){
+    let mg, ml = null;
+    if (amMl){ ml = parseFloat(amMl[2].replace(',','.')); mg = ml*mgml; }
+    else { mg = parseFloat(amMg[2].replace(',','.')); }
+    const mgkg = Math.round(mg/kg*10)/10;
+    const desc = ml !== null
+      ? 'Prescribiste ' + ml + ' ml = ' + Math.round(mg) + ' mg por dosis (' + mgkg + ' mg/kg para ' + kg +
+        ' kg). El rango recomendado es 10–15 mg/kg/dosis, es decir ' +
+        Math.round(10*kg/mgml*10)/10 + '–' + Math.round(15*kg/mgml*10)/10 + ' ml por dosis.'
+      : 'Prescribiste ' + Math.round(mg) + ' mg por dosis (' + mgkg + ' mg/kg para ' + kg +
+        ' kg). El rango recomendado es 10–15 mg/kg/dosis, es decir ' +
+        Math.round(10*kg) + '–' + Math.round(15*kg) + ' mg por dosis.';
+    dose = { mgkg, desc };
+    f2 = mgkg > 15.5 || mgkg < 9.5;
+  }
+  const f3 = /albendazol|desparasitaci/.test(t);
+  const plan = 100 - (f2 ? 31 : 0) - (f3 ? 31 : 0);
+  const edu = f1 ? 0 : 100;
+  const total = Math.round((86*0.25 + 92*0.15 + 100*0.10 + plan*0.30 + edu*0.20)*10)/10;
+  return { f1, f2, f3, dose, plan, edu, total };
 }
 
 document.addEventListener('keydown', e=>{
