@@ -9,7 +9,8 @@ audit engine that runs in Telepatía's client hospitals.
 
 | Path | What it is |
 |---|---|
-| `index.html` | Landing page. The Demo section embeds the live prototype (click "Abrir demo interactivo"). |
+| `index.html` | Phase 1 landing page. The Demo section embeds the live prototype (click "Abrir demo interactivo"). |
+| `phase2.html` | Phase 2 / final round page ("The business case"), same live demo embed. |
 | `prototype/index.html` | Interactive UI prototype (self-contained, no build step). Open it in a browser. |
 | `tools/record_demo.py` | Renders the prototype's autoplay run to `demo.mp4` (1280x720, H.264). |
 | `docs/proposal.md` | Full project proposal: market, ICP, pricing, CDSS configuration. |
