@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Telepatía Learning · Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --canvas:#F6F6ED; --sidebar:#F0F1E6; --card:#FFFFFF; --border:#E3E5D8;
+    --green:#07603B; --green-dark:#054D2F; --chip-green-bg:#E1F0E6; --chip-green-tx:#1E7A46;
+    --ink:#22271F; --muted:#78806C; --soft:#9AA18C;
+    --amber:#C4770F; --amber-bg:#FBF3E4; --red:#B42318; --red-bg:#FBEAE8;
+    --orange-bar:#E07C2A; --track:#E9EAE0; --pill-dark:#2B2F28;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"IBM Plex Sans",system-ui,sans-serif;background:#DEDFD2;color:var(--ink);
+       display:flex;align-items:center;justify-content:center;min-height:100vh;padding:16px;}
+  .stage{width:1280px;height:720px;background:var(--canvas);border-radius:14px;overflow:hidden;
+         display:flex;box-shadow:0 18px 60px rgba(20,25,18,.28);position:relative;}
+  svg.ic{vertical-align:-2px;flex-shrink:0;}
+
+  /* ── Sidebar ── */
+  .side{width:232px;background:var(--sidebar);border-right:1px solid var(--border);
+        display:flex;flex-direction:column;padding:18px 14px;flex-shrink:0;}
+  .brand{display:flex;align-items:center;gap:8px;padding:2px 6px 14px;}
+  .brand .word{font-weight:700;font-size:17px;letter-spacing:-0.02em;}
+  .brand .mode{font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+               background:var(--chip-green-bg);color:var(--chip-green-tx);padding:3px 8px;border-radius:999px;}
+  .search{background:#FAFAF3;border:1px solid var(--border);border-radius:9px;padding:8px 12px;
+          font-size:12.5px;color:var(--soft);margin-bottom:12px;display:flex;gap:7px;align-items:center;}
+  .case{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:11px 12px;margin-bottom:9px;}
+  .case.active{border:1.5px solid var(--green);}
+  .case .t{font-weight:600;font-size:13px;margin-bottom:5px;}
+  .case .sub{font-size:11px;color:var(--muted);margin-bottom:6px;}
+  .chip{display:inline-flex;align-items:center;gap:4px;font-size:10.5px;font-weight:600;
+        padding:3px 8px;border-radius:999px;}
+  .chip.done{background:var(--chip-green-bg);color:var(--chip-green-tx);}
+  .chip.pend{background:var(--amber-bg);color:var(--amber);}
+  .newbtn{margin-top:auto;background:var(--green);color:#fff;font-weight:600;font-size:13.5px;
+          border:none;border-radius:10px;padding:12px;cursor:default;}
+
+  /* ── Main ── */
+  .main{flex:1;display:flex;flex-direction:column;min-width:0;position:relative;}
+  .scene{position:absolute;inset:0;display:none;flex-direction:column;overflow:hidden;}
+  .scene.on{display:flex;}
+  .top{display:flex;align-items:center;gap:12px;padding:20px 28px 12px;}
+  .top h1{font-size:19px;font-weight:700;letter-spacing:-0.01em;}
+  .avatar{width:26px;height:26px;border-radius:50%;background:#E7E8DB;color:#5A614F;
+          font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .timer{background:var(--pill-dark);color:#fff;font-size:11.5px;font-weight:600;
+         border-radius:999px;padding:4px 12px;display:inline-flex;gap:6px;align-items:center;}
+  .recdot{width:7px;height:7px;border-radius:50%;background:#E5484D;animation:blink 1.4s infinite;}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.35}}
+  .body{flex:1;overflow:auto;padding:6px 28px 90px;}
+  .sect{margin-bottom:18px;}
+  .sect h2{font-size:14px;font-weight:700;display:flex;gap:7px;align-items:center;margin-bottom:8px;}
+  .sect h2::before{content:"▾";color:#3E4437;font-size:11px;}
+  .sect .txt{font-size:13px;line-height:1.65;color:#3C4234;}
+  .panelcard{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+
+  .footerbar{position:absolute;bottom:0;left:0;right:0;display:flex;align-items:center;
+             justify-content:flex-end;gap:12px;padding:14px 24px;background:linear-gradient(0deg,var(--canvas) 65%,transparent);}
+  .btn{border-radius:999px;font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;border:none;
+       padding:11px 20px;display:inline-flex;align-items:center;gap:8px;}
+  .btn.primary{background:var(--green);color:#fff;}
+  .btn.ghost{background:transparent;color:var(--red);border:1px solid #EBC9C4;}
+  .btn.line{background:#fff;color:var(--ink);border:1px solid var(--border);}
+  .wave{display:inline-flex;gap:2.5px;align-items:flex-end;height:14px;}
+  .wave i{width:2.5px;background:var(--green);border-radius:2px;animation:wv 1s infinite ease-in-out;}
+  .wave i:nth-child(2){animation-delay:.15s}.wave i:nth-child(3){animation-delay:.3s}
+  .wave i:nth-child(4){animation-delay:.45s}
+  @keyframes wv{0%,100%{height:4px}50%{height:14px}}
+
+  /* copilot column */
+  .copilot{width:300px;border-left:1px solid var(--border);padding:18px 16px;display:flex;
+           flex-direction:column;gap:9px;flex-shrink:0;background:#F4F5EA;}
+  .copilot .h{font-size:13px;font-weight:700;margin-bottom:4px;}
+  .sugg{background:#fff;border:1px solid var(--border);border-radius:10px;padding:9px 12px;
+        font-size:12px;color:#454B3B;display:flex;gap:7px;align-items:flex-start;}
+  .sugg svg{margin-top:1px;}
+  .copilot .foot{margin-top:auto;font-size:9.5px;color:var(--soft);line-height:1.5;}
+  .transcript{flex:1;overflow:auto;}
+  .line{margin-bottom:12px;font-size:13px;line-height:1.6;max-width:640px;opacity:0;transform:translateY(6px);
+        transition:all .45s ease;}
+  .line.show{opacity:1;transform:none;}
+  .line b{font-weight:600;}
+  .line.est b{color:var(--green);}
+  .line.mad b{color:#7A5A20;}
+
+  /* findings */
+  .finding{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:15px 17px;
+           margin-bottom:12px;opacity:0;transform:translateY(10px);transition:all .5s ease;}
+  .finding.show{opacity:1;transform:none;}
+  .finding .tag{font-size:11px;font-weight:700;letter-spacing:.02em;display:inline-flex;gap:6px;
+                align-items:center;margin-bottom:7px;}
+  .finding .tag.red{color:var(--red);}
+  .finding .tag.amber{color:var(--amber);}
+  .finding h3{font-size:14px;font-weight:700;margin-bottom:5px;}
+  .finding p{font-size:12.5px;line-height:1.6;color:#474D3E;margin-bottom:7px;}
+  .cite{font-size:11.5px;color:var(--green);background:var(--chip-green-bg);border-radius:8px;
+        padding:6px 10px;display:inline-flex;gap:6px;align-items:center;margin-bottom:9px;}
+  .facts{display:flex;gap:8px;}
+  .gatechip{font-size:10.5px;font-weight:700;background:var(--red-bg);color:var(--red);
+            padding:3px 9px;border-radius:999px;}
+
+  /* gauge + bars */
+  .scorewrap{display:flex;gap:34px;align-items:flex-start;}
+  .gauge{width:170px;flex-shrink:0;text-align:center;}
+  .gauge svg{transform:rotate(-90deg);}
+  .gauge .num{font-size:21px;font-weight:700;margin-top:-104px;}
+  .gauge .lab{font-size:11px;font-weight:700;letter-spacing:.05em;margin-bottom:64px;}
+  .bars{flex:1;}
+  .brow{margin-bottom:13px;}
+  .brow .bt{font-size:12.5px;font-weight:700;margin-bottom:5px;display:flex;justify-content:space-between;}
+  .brow .bt span:last-child{color:var(--muted);font-weight:600;}
+  .track{height:6px;background:var(--track);border-radius:4px;overflow:hidden;}
+  .fill{height:6px;border-radius:4px;width:0;transition:width 1.1s ease;}
+
+  .banner{border-radius:12px;padding:13px 16px;font-size:13px;font-weight:600;margin-bottom:16px;
+          display:flex;gap:9px;align-items:center;}
+  .banner.ok{background:var(--chip-green-bg);color:var(--green-dark);}
+  .banner.bad{background:var(--red-bg);color:var(--red);}
+
+  .planitem{display:flex;gap:9px;font-size:13px;line-height:1.6;margin-bottom:7px;align-items:flex-start;}
+  .planitem svg{margin-top:3px;color:var(--chip-green-tx);}
+  .strike{text-decoration:line-through;color:var(--soft);}
+  .fixnew{color:var(--green-dark);font-weight:600;}
+
+  /* upload scene */
+  .upwrap{flex:1;display:flex;align-items:center;justify-content:center;}
+  .upcard{width:620px;}
+  .drop{border:1.5px dashed #C9CDBA;border-radius:12px;padding:34px 20px;text-align:center;
+        color:var(--soft);font-size:13px;background:#FAFAF3;transition:all .4s ease;
+        display:flex;flex-direction:column;align-items:center;gap:8px;}
+  .drop.hot{border-color:var(--green);color:var(--green);background:#F2F7F0;}
+  .filechip{display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--border);
+            border-radius:10px;padding:11px 14px;margin-top:14px;font-size:12.5px;font-weight:600;
+            opacity:0;transform:translateY(8px);transition:all .5s ease;}
+  .filechip.show{opacity:1;transform:none;}
+  .filechip .sz{color:var(--muted);font-weight:400;}
+  .ocr{margin-top:14px;opacity:0;transition:opacity .5s ease;}
+  .ocr.show{opacity:1;}
+  .ocr .st{font-size:12.5px;font-weight:600;margin-bottom:7px;display:flex;gap:7px;align-items:center;color:#474D3E;}
+  .ocr .st.okst{color:var(--green-dark);}
+
+  /* dashboard */
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:16px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 18px;}
+  .kpi .n{font-size:24px;font-weight:700;}
+  .kpi .l{font-size:11.5px;color:var(--muted);margin-top:3px;}
+  .simchip{font-size:10.5px;font-weight:700;background:var(--amber-bg);color:var(--amber);
+           padding:3px 10px;border-radius:999px;margin-left:10px;}
+  .dashgrid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;}
+  .oprow{display:flex;gap:11px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--border);}
+  .oprow:last-child{border-bottom:none;padding-bottom:0;}
+  .oprow .dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .oprow .ot{font-size:12.5px;font-weight:700;}
+  .oprow .od{font-size:11.5px;color:var(--muted);line-height:1.5;margin-top:2px;}
+  .oprow .pct{margin-left:auto;font-size:11px;font-weight:700;padding:3px 9px;border-radius:999px;flex-shrink:0;}
+  .pct.r{background:var(--red-bg);color:var(--red);}
+  .pct.a{background:var(--amber-bg);color:var(--amber);}
+
+  /* case brief + entry options */
+  .briefwrap{flex:1;display:flex;align-items:center;justify-content:center;}
+  .brief{width:640px;background:var(--card);border:1px solid var(--border);border-radius:16px;
+         padding:28px 32px;box-shadow:0 12px 40px rgba(20,25,18,.10);}
+  .brief .eyebrow{font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;
+                  color:var(--green);margin-bottom:10px;}
+  .brief h1{font-size:22px;font-weight:700;letter-spacing:-0.01em;margin-bottom:12px;}
+  .brief p{font-size:13.5px;line-height:1.7;color:#474D3E;margin-bottom:10px;}
+  .brief .meta{display:flex;gap:8px;margin:12px 0 18px;flex-wrap:wrap;}
+  .mchip{font-size:11.5px;font-weight:600;background:#F2F3E8;border:1px solid var(--border);
+         border-radius:999px;padding:5px 12px;color:#4A5040;}
+  .entries{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  .entry{border:1px solid var(--border);border-radius:12px;padding:16px;cursor:pointer;
+         transition:border-color .25s ease;background:#FCFCF6;}
+  .entry:hover{border-color:var(--green);}
+  .entry .eh{font-size:13.5px;font-weight:700;display:flex;gap:8px;align-items:center;margin-bottom:6px;color:var(--green-dark);}
+  .entry .ed{font-size:12px;color:var(--muted);line-height:1.55;}
+
+  /* demo controls */
+  .ctrl{position:fixed;bottom:22px;right:26px;display:flex;gap:8px;align-items:center;z-index:50;
+        background:var(--pill-dark);border-radius:999px;padding:8px 12px;box-shadow:0 6px 24px rgba(0,0,0,.3);}
+  .ctrl button{background:transparent;border:none;color:#fff;font-size:14px;cursor:pointer;
+               padding:4px 8px;font-family:inherit;font-weight:600;}
+  .ctrl .dots{display:flex;gap:5px;padding:0 4px;}
+  .ctrl .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.3);}
+  .ctrl .dot.on{background:#fff;}
+  .ctrl .lbl{color:rgba(255,255,255,.6);font-size:10.5px;padding-right:4px;}
+</style>
+</head>
+<body>
+
+<!-- reusable icons -->
+<svg style="display:none">
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2l2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.8L1.8 18a2 2 0 001.7 3h17a2 2 0 001.7-3L13.7 3.8a2 2 0 00-3.4 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></g></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></g></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.5" y2="16.5"/></g></symbol>
+  <symbol id="i-trash" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></g></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M21.4 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.2-9.19a4 4 0 015.65 5.66l-9.2 9.19a2 2 0 01-2.82-2.83l8.49-8.48"/></symbol>
+  <symbol id="i-file" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></g></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><g fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></g></symbol>
+</svg>
+
+<div class="stage">
+  <!-- ══ Sidebar ══ -->
+  <div class="side">
+    <div class="brand"><span class="word">telepatia</span><span class="mode">Learning</span></div>
+    <div class="search"><svg class="ic" width="13" height="13"><use href="#i-search"/></svg> Buscar caso</div>
+    <div class="case active">
+      <div class="t">Caso 03 · Lactante febril</div>
+      <div class="sub">Pediatría · Semiología</div>
+      <span class="chip pend">● En curso</span>
+    </div>
+    <div class="case">
+      <div class="t">Caso 02 · Dolor torácico</div>
+      <div class="sub">Medicina interna</div>
+      <span class="chip done">● Aprobado · 91%</span>
+    </div>
+    <div class="case">
+      <div class="t">Caso 01 · Cefalea crónica</div>
+      <div class="sub">Semiología</div>
+      <span class="chip done">● Aprobado · 84%</span>
+    </div>
+    <button class="newbtn">Nuevo caso +</button>
+  </div>
+
+  <!-- ══ Main ══ -->
+  <div class="main">
+
+    <!-- ── Scene 0: case brief + entry options ── -->
+    <div class="scene on" id="s0">
+      <div class="briefwrap">
+        <div class="brief">
+          <div class="eyebrow">Caso simulado · Modo estudiante</div>
+          <h1>Lactante de 18 meses con fiebre</h1>
+          <p>Acude la madre con su hija de 18 meses por fiebre de 24 horas de evolución.
+             Realiza la entrevista, el examen físico dirigido y elabora la historia clínica
+             completa con tu plan de manejo.</p>
+          <div class="meta">
+            <span class="mchip">18 meses · 11 kg</span>
+            <span class="mchip">Ambulatorio</span>
+            <span class="mchip">Guías: institucional + AIEPI</span>
+          </div>
+          <p style="font-size:12px;font-weight:700;color:var(--ink);margin-bottom:10px;">Elige cómo registrar el caso</p>
+          <div class="entries">
+            <div class="entry" onclick="go(1)">
+              <div class="eh"><svg class="ic" width="15" height="15"><use href="#i-mic"/></svg> Consulta simulada</div>
+              <div class="ed">Entrevista al paciente simulado. Scribe escucha, transcribe y tú redactas la nota.</div>
+            </div>
+            <div class="entry" onclick="go(2)">
+              <div class="eh"><svg class="ic" width="15" height="15"><use href="#i-clip"/></svg> Historia manuscrita</div>
+              <div class="ed">Sube el PDF o la foto de tu historia en papel. Se digitaliza y entra al mismo flujo.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Scene 1: recording / interview ── -->
+    <div class="scene" id="s1">
+      <div style="display:flex;flex:1;min-height:0;">
+        <div style="flex:1;display:flex;flex-direction:column;min-width:0;">
+          <div class="top">
+            <h1>Caso 03 · Lactante febril</h1>
+            <span class="timer"><span class="recdot"></span><span id="clock">00:00</span></span>
+          </div>
+          <div class="body transcript" id="tr">
+            <div class="line est"><b>Estudiante:</b> Buenos días, soy la estudiante de medicina que va a atender a la bebé. Cuénteme, ¿qué le trae hoy a consulta?</div>
+            <div class="line mad"><b>Madre:</b> Tiene fiebre desde ayer en la tarde, le llegó hasta 39 grados.</div>
+            <div class="line est"><b>Estudiante:</b> ¿Ha notado tos, vómito, diarrea o rechazo a la alimentación?</div>
+            <div class="line mad"><b>Madre:</b> No, nada de eso. Solo está más irritable de lo normal.</div>
+            <div class="line est"><b>Estudiante:</b> ¿Está orinando bien? ¿Le ha dado algún medicamento?</div>
+            <div class="line mad"><b>Madre:</b> Orina normal. Anoche le di acetaminofén y le bajó un poco.</div>
+            <div class="line est"><b>Estudiante:</b> Al examen la encuentro activa, hidratada, temperatura 38.8, frecuencia cardiaca 132. Orofaringe y oídos normales, no tiene signos meníngeos. No encuentro un foco claro de la fiebre.</div>
+          </div>
+        </div>
+        <div class="copilot">
+          <div class="h">Tutor clínico</div>
+          <div class="sugg"><svg class="ic" width="13" height="13" style="color:var(--green);"><use href="#i-sparkle"/></svg> ¿Qué otros aspectos deberías explorar en un lactante febril?</div>
+          <div class="sugg"><svg class="ic" width="13" height="13" style="color:var(--green);"><use href="#i-sparkle"/></svg> ¿Cuáles diagnósticos diferenciales estás considerando?</div>
+          <div class="sugg"><svg class="ic" width="13" height="13" style="color:var(--green);"><use href="#i-sparkle"/></svg> Ayúdame con la escala de apariencia (TEP)</div>
+          <div class="foot">El tutor orienta la entrevista sin dar respuestas. Toda la retroalimentación formal llega al finalizar el caso.</div>
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn ghost"><svg class="ic" width="13" height="13"><use href="#i-trash"/></svg> Descartar</button>
+        <span class="wave"><i></i><i></i><i></i><i></i></span>
+        <button class="btn primary" onclick="go(3)"><svg class="ic" width="14" height="14"><use href="#i-sparkle"/></svg> Finalizar y generar nota</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 2: handwritten record upload (alternate entry) ── -->
+    <div class="scene" id="s2">
+      <div class="top"><h1>Vía de entrada alternativa · Historia manuscrita</h1></div>
+      <div class="upwrap">
+        <div class="upcard">
+          <div class="drop" id="dz">
+            <svg class="ic" width="20" height="20"><use href="#i-clip"/></svg>
+            Arrastra o haz clic para adjuntar la historia clínica (PDF o foto)
+          </div>
+          <div class="filechip" id="filechip">
+            <svg class="ic" width="16" height="16" style="color:var(--green);"><use href="#i-file"/></svg>
+            historia_caso03_manuscrita.pdf <span class="sz">· 2 páginas · 1.8 MB</span>
+          </div>
+          <div class="ocr" id="ocr">
+            <div class="st" id="ocrstatus">Digitalizando manuscrito…</div>
+            <div class="track"><div class="fill" id="ocrbar" style="background:var(--green);"></div></div>
+          </div>
+          <p style="font-size:12px;color:var(--muted);line-height:1.6;margin-top:16px;">
+            El estudiante puede registrar el caso en consulta simulada con Scribe o subir su historia
+            manuscrita en papel. Ambas vías producen una nota estructurada y entran al mismo motor
+            de retroalimentación con guías.
+          </p>
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn primary" onclick="go(3)">Continuar a la nota estructurada →</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 3: student note (with planted errors) ── -->
+    <div class="scene" id="s3">
+      <div class="top"><span class="avatar">C3</span><h1>Historia clínica · borrador del estudiante</h1></div>
+      <div class="body">
+        <div class="sect"><h2>Identificación</h2>
+          <div class="txt">Lactante femenina de 18 meses. Peso: 11 kg. Acompañada por la madre.</div></div>
+        <div class="sect"><h2>Motivo de consulta</h2>
+          <div class="txt">"Fiebre desde ayer"</div></div>
+        <div class="sect"><h2>Enfermedad actual</h2>
+          <div class="txt">Cuadro de 24 horas de evolución consistente en fiebre cuantificada hasta 39 °C,
+          asociada a irritabilidad leve. Niega tos, vómito, diarrea o rechazo de la vía oral.
+          Diuresis conservada. Recibió una dosis de acetaminofén la noche previa con respuesta parcial.</div></div>
+        <div class="sect"><h2>Examen físico</h2>
+          <div class="txt">T 38.8 °C · FC 132 · FR 28. Activa, hidratada, mucosas húmedas.
+          Orofaringe y otoscopia normales. No signos meníngeos. Sin foco infeccioso aparente.</div></div>
+        <div class="sect"><h2>Diagnóstico</h2>
+          <div class="txt">Fiebre sin foco en lactante (R50.9).</div></div>
+        <div class="sect"><h2>Plan</h2>
+          <div class="txt">
+            1. Acetaminofén jarabe 150 mg/5 ml: <b>10 ml VO cada 6 horas</b>.<br>
+            2. <b>Albendazol 400 mg VO dosis única</b> (desparasitación de rutina).<br>
+            3. Control ambulatorio en 48 horas.
+          </div></div>
+      </div>
+      <div class="footerbar">
+        <button class="btn line">Guardar borrador</button>
+        <button class="btn primary" onclick="go(4)"><svg class="ic" width="14" height="14"><use href="#i-sparkle"/></svg> Enviar a retroalimentación</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 4: formative feedback ── -->
+    <div class="scene" id="s4">
+      <div class="top"><span class="avatar">C3</span><h1>Retroalimentación del caso</h1></div>
+      <div class="body">
+        <div class="banner bad"><svg class="ic" width="15" height="15"><use href="#i-alert"/></svg> Hallazgo crítico abierto: el caso no puede aprobarse hasta resolverlo.</div>
+        <div class="scorewrap" style="margin-bottom:22px;">
+          <div class="gauge">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle cx="75" cy="75" r="62" fill="none" stroke="#E9EAE0" stroke-width="13"/>
+              <circle id="arc1" cx="75" cy="75" r="62" fill="none" stroke="#B42318" stroke-width="13"
+                      stroke-linecap="round" stroke-dasharray="389.5" stroke-dashoffset="389.5"/>
+            </svg>
+            <div class="num" id="score1">0%</div>
+            <div class="lab" style="color:var(--red);">DEFICIENTE</div>
+          </div>
+          <div class="bars">
+            <div class="brow"><div class="bt"><span>Identificación y anamnesis</span><span>86%</span></div>
+              <div class="track"><div class="fill" data-w="86%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Examen físico</span><span>92%</span></div>
+              <div class="track"><div class="fill" data-w="92%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Diagnóstico</span><span>100%</span></div>
+              <div class="track"><div class="fill" data-w="100%" style="background:var(--green);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Plan y tratamiento</span><span>38%</span></div>
+              <div class="track"><div class="fill" data-w="38%" style="background:var(--orange-bar);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Educación al cuidador</span><span>0%</span></div>
+              <div class="track"><div class="fill" data-w="3%" style="background:var(--red);"></div></div></div>
+          </div>
+        </div>
+
+        <div class="finding" id="f1">
+          <div class="tag red"><svg class="ic" width="12" height="12"><use href="#i-alert"/></svg> OMISIÓN CRÍTICA · SIGNOS DE ALARMA</div>
+          <h3>Documentar la educación sobre signos de alarma a la madre</h3>
+          <p>En fiebre sin foco en menores de 36 meses, la nota debe registrar los signos de alarma
+             explicados al cuidador: fiebre persistente mayor a 48 horas, mal aspecto, petequias,
+             rechazo de la vía oral o convulsión. Es la red de seguridad del manejo ambulatorio.</p>
+          <span class="cite"><svg class="ic" width="12" height="12"><use href="#i-book"/></svg> Guía institucional de fiebre sin foco · AIEPI, signos de peligro</span>
+          <div class="facts"><span class="gatechip">Bloquea la aprobación del caso</span></div>
+        </div>
+
+        <div class="finding" id="f2">
+          <div class="tag amber"><svg class="ic" width="12" height="12"><use href="#i-alert"/></svg> DOSIS INCORRECTA · MEDICAMENTO</div>
+          <h3>Ajustar acetaminofén a 10–15 mg/kg/dosis</h3>
+          <p>Prescribiste 10 ml de jarabe 150 mg/5 ml = 300 mg por dosis (27 mg/kg para 11 kg).
+             La dosis recomendada es 110–165 mg, es decir 3.5–5.5 ml cada 6 horas.
+             La sobredosificación repetida de acetaminofén es la primera causa de hepatotoxicidad medicamentosa en pediatría.</p>
+          <span class="cite"><svg class="ic" width="12" height="12"><use href="#i-book"/></svg> Guía institucional de analgesia pediátrica · dosificación por peso</span>
+        </div>
+
+        <div class="finding" id="f3">
+          <div class="tag amber"><svg class="ic" width="12" height="12"><use href="#i-alert"/></svg> MEDICAMENTO NO PERTINENTE · ALBENDAZOL</div>
+          <h3>Eliminar la desparasitación de rutina</h3>
+          <p>No hay indicación en este episodio febril agudo: la nota no documenta palidez, pica,
+             solicitud del cuidador ni contexto epidemiológico. La desparasitación rutinaria sin
+             indicación es una orden de bajo valor que no modifica el manejo del cuadro actual.</p>
+          <span class="cite"><svg class="ic" width="12" height="12"><use href="#i-book"/></svg> Guía de desparasitación en pediatría · criterios de indicación</span>
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn primary" onclick="go(5)">Corregir la nota →</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 5: corrected note + new score ── -->
+    <div class="scene" id="s5">
+      <div class="top"><span class="avatar">C3</span><h1>Nota corregida · segundo intento</h1></div>
+      <div class="body">
+        <div class="banner ok"><svg class="ic" width="15" height="15"><use href="#i-check"/></svg> Hallazgo crítico resuelto · Caso aprobado</div>
+        <div class="scorewrap" style="margin-bottom:22px;">
+          <div class="gauge">
+            <svg width="150" height="150" viewBox="0 0 150 150">
+              <circle cx="75" cy="75" r="62" fill="none" stroke="#E9EAE0" stroke-width="13"/>
+              <circle id="arc2" cx="75" cy="75" r="62" fill="none" stroke="#07603B" stroke-width="13"
+                      stroke-linecap="round" stroke-dasharray="389.5" stroke-dashoffset="389.5"/>
+            </svg>
+            <div class="num" id="score2">0%</div>
+            <div class="lab" style="color:var(--green);">SOBRESALIENTE</div>
+          </div>
+          <div class="bars">
+            <div class="panelcard">
+              <div style="font-size:13px;font-weight:700;margin-bottom:10px;">Plan corregido</div>
+              <div class="planitem"><svg class="ic" width="13" height="13"><use href="#i-check"/></svg><span>Acetaminofén jarabe 150 mg/5 ml:
+                <span class="strike">10 ml cada 6 h</span> → <span class="fixnew">5 ml (150 mg ≈ 13.6 mg/kg) VO cada 6 horas si fiebre</span></span></div>
+              <div class="planitem"><svg class="ic" width="13" height="13"><use href="#i-check"/></svg><span><span class="strike">Albendazol 400 mg VO dosis única</span> → <span class="fixnew">orden eliminada, sin indicación en este episodio</span></span></div>
+              <div class="planitem"><svg class="ic" width="13" height="13"><use href="#i-check"/></svg><span>Control ambulatorio en 48 horas con recomendación de reconsulta inmediata si signos de alarma</span></div>
+              <div class="planitem"><svg class="ic" width="13" height="13"><use href="#i-check"/></svg><span class="fixnew">Nueva sección · Signos de alarma explicados a la madre: fiebre &gt; 48 h,
+                mal aspecto o somnolencia, petequias, rechazo de la vía oral, convulsión</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="txt" style="font-size:12.5px;color:var(--muted);max-width:720px;">
+          Cada corrección queda trazada con su cita de guía. El puntaje y los hallazgos alimentan el
+          portafolio del estudiante y el panel docente.
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn primary" onclick="go(6)">Ver panel docente →</button>
+      </div>
+    </div>
+
+    <!-- ── Scene 6: faculty dashboard ── -->
+    <div class="scene" id="s6">
+      <div class="top"><h1>Panel docente · Semiología 2026-2</h1><span class="simchip">Datos simulados</span></div>
+      <div class="body">
+        <div class="kpis">
+          <div class="kpi"><div class="n">30</div><div class="l">Estudiantes activos</div></div>
+          <div class="kpi"><div class="n">124</div><div class="l">Casos completados</div></div>
+          <div class="kpi"><div class="n" style="color:var(--green);">71%</div><div class="l">Puntaje promedio de la cohorte</div></div>
+        </div>
+        <div class="dashgrid">
+          <div class="panelcard">
+            <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Errores más frecuentes de la cohorte</div>
+            <div class="brow"><div class="bt"><span>Omisión de signos de alarma</span><span>63%</span></div>
+              <div class="track"><div class="fill" data-w="63%" style="background:var(--red);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Dosificación pediátrica incorrecta</span><span>41%</span></div>
+              <div class="track"><div class="fill" data-w="41%" style="background:var(--orange-bar);"></div></div></div>
+            <div class="brow"><div class="bt"><span>Órdenes no pertinentes</span><span>34%</span></div>
+              <div class="track"><div class="fill" data-w="34%" style="background:var(--orange-bar);"></div></div></div>
+            <div class="brow" style="margin-bottom:0;"><div class="bt"><span>Enfermedad actual incompleta</span><span>28%</span></div>
+              <div class="track"><div class="fill" data-w="28%" style="background:var(--green);"></div></div></div>
+          </div>
+          <div class="panelcard">
+            <div style="font-size:13px;font-weight:700;margin-bottom:4px;">Oportunidades de enseñanza</div>
+            <div style="font-size:11px;color:var(--muted);margin-bottom:6px;">Sugeridas a partir de los puntos de mayor dolor de la cohorte</div>
+            <div class="oprow">
+              <span class="dot" style="background:var(--red);"></span>
+              <div><div class="ot">Taller de signos de alarma y red de seguridad</div>
+                <div class="od">Priorizar antes de la rotación de urgencias pediátricas</div></div>
+              <span class="pct r">63% de la cohorte</span>
+            </div>
+            <div class="oprow">
+              <span class="dot" style="background:var(--orange-bar);"></span>
+              <div><div class="ot">Sesión práctica de dosificación por peso</div>
+                <div class="od">Cálculo de dosis en pediatría con casos reales</div></div>
+              <span class="pct a">41%</span>
+            </div>
+            <div class="oprow">
+              <span class="dot" style="background:var(--orange-bar);"></span>
+              <div><div class="ot">Seminario de pertinencia de órdenes</div>
+                <div class="od">Órdenes de bajo valor y sus indicaciones según guía</div></div>
+              <span class="pct a">34%</span>
+            </div>
+          </div>
+        </div>
+        <div class="panelcard">
+          <div style="font-size:13px;font-weight:700;margin-bottom:12px;">Progresión de la cohorte · puntaje promedio por semana</div>
+          <div class="brow"><div class="bt"><span>Semana 1</span><span>58%</span></div>
+            <div class="track"><div class="fill" data-w="58%" style="background:var(--green);opacity:.45;"></div></div></div>
+          <div class="brow"><div class="bt"><span>Semana 3</span><span>69%</span></div>
+            <div class="track"><div class="fill" data-w="69%" style="background:var(--green);opacity:.7;"></div></div></div>
+          <div class="brow" style="margin-bottom:0;"><div class="bt"><span>Semana 6</span><span>84%</span></div>
+            <div class="track"><div class="fill" data-w="84%" style="background:var(--green);"></div></div></div>
+        </div>
+      </div>
+      <div class="footerbar">
+        <button class="btn line" onclick="go(0)">Reiniciar demo</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- demo controls -->
+<div class="ctrl">
+  <span class="lbl">AUTO</span>
+  <button onclick="toggleAuto()" id="autobtn">▶</button>
+  <button onclick="prev()">‹</button>
+  <div class="dots" id="dots"></div>
+  <button onclick="next()">›</button>
+</div>
+
+<script>
+const N = 7;
+let cur = 0, auto = false, autoTimer = null, clockTimer = null, sec = 0;
+const DUR = [6000, 16000, 9000, 8000, 14000, 9000, 11000]; // autoplay ms per scene
+
+const dots = document.getElementById('dots');
+for (let i = 0; i < N; i++) { const d = document.createElement('div'); d.className = 'dot'; dots.appendChild(d); }
+
+function paintDots(){ [...dots.children].forEach((d,i)=>d.classList.toggle('on', i===cur)); }
+
+function go(n){
+  cur = (n + N) % N;
+  document.querySelectorAll('.scene').forEach((s,i)=>s.classList.toggle('on', i===cur));
+  paintDots();
+  enterScene(cur);
+  if (auto) scheduleAuto();
+}
+function next(){ go(cur+1); }
+function prev(){ go(cur-1); }
+
+function scheduleAuto(){ clearTimeout(autoTimer); autoTimer = setTimeout(next, DUR[cur]); }
+function toggleAuto(){
+  auto = !auto;
+  document.getElementById('autobtn').textContent = auto ? '❚❚' : '▶';
+  if (auto) scheduleAuto(); else clearTimeout(autoTimer);
+}
+
+function animateBars(scene){
+  scene.querySelectorAll('.fill').forEach((f,i)=>{
+    if (f.id === 'ocrbar') return;
+    f.style.width = '0';
+    setTimeout(()=>{ f.style.width = f.dataset.w; }, 250 + i*160);
+  });
+}
+function animateGauge(arcId, numId, target, ms){
+  const arc = document.getElementById(arcId), num = document.getElementById(numId);
+  const C = 389.5, t0 = performance.now();
+  function step(t){
+    const p = Math.min((t - t0) / ms, 1), v = target * (0.1 + 0.9*p*p*(3-2*p));
+    arc.style.strokeDashoffset = C * (1 - v/100);
+    num.textContent = v.toFixed(1) + '%';
+    if (p < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+const CHECK_SVG = '<svg class="ic" width="13" height="13" style="color:var(--green-dark);"><use href="#i-check"/></svg> ';
+
+function enterScene(i){
+  clearInterval(clockTimer);
+  const scene = document.getElementById('s'+i);
+  if (i === 1){
+    sec = 0;
+    const clock = document.getElementById('clock');
+    clockTimer = setInterval(()=>{ sec++;
+      clock.textContent = String(Math.floor(sec/60)).padStart(2,'0') + ':' + String(sec%60).padStart(2,'0');
+    }, 1000);
+    const lines = scene.querySelectorAll('.line');
+    lines.forEach(l=>l.classList.remove('show'));
+    lines.forEach((l,k)=>setTimeout(()=>l.classList.add('show'), 700 + k*1750));
+  }
+  if (i === 2){
+    const dz = document.getElementById('dz'), fc = document.getElementById('filechip');
+    const ocr = document.getElementById('ocr'), bar = document.getElementById('ocrbar');
+    const st = document.getElementById('ocrstatus');
+    dz.classList.remove('hot'); fc.classList.remove('show'); ocr.classList.remove('show');
+    bar.style.width = '0'; st.classList.remove('okst');
+    st.textContent = 'Digitalizando manuscrito…';
+    setTimeout(()=>dz.classList.add('hot'), 700);
+    setTimeout(()=>fc.classList.add('show'), 1500);
+    setTimeout(()=>{ ocr.classList.add('show'); bar.style.width='55%'; }, 2300);
+    setTimeout(()=>{ st.textContent='Estructurando la nota…'; bar.style.width='85%'; }, 4300);
+    setTimeout(()=>{ bar.style.width='100%'; st.classList.add('okst');
+      st.innerHTML = CHECK_SVG + 'Nota estructurada lista para retroalimentación'; }, 6200);
+  }
+  if (i === 4){
+    animateBars(scene);
+    animateGauge('arc1','score1',62.4,1400);
+    ['f1','f2','f3'].forEach((id,k)=>{
+      const f = document.getElementById(id); f.classList.remove('show');
+      setTimeout(()=>f.classList.add('show'), 900 + k*650);
+    });
+  }
+  if (i === 5){
+    animateBars(scene);
+    animateGauge('arc2','score2',96.8,1400);
+  }
+  if (i === 6){ animateBars(scene); }
+}
+
+document.addEventListener('keydown', e=>{
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+  if (e.key === 'ArrowLeft') prev();
+  if (e.key.toLowerCase() === 'a') toggleAuto();
+});
+paintDots();
+// deep-link: open ...demo.html#4 to jump straight to a scene (0-6)
+const h = parseInt(location.hash.slice(1), 10);
+if (!isNaN(h) && h >= 0 && h < N) go(h);
+</script>
+</body>
+</html>
